@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import connectDB from "./config/db.js";
+import authRoutes from "./route/authRoute.js";
 
 dotenv.config({ path: "../.env" });
 
@@ -11,6 +12,8 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+app.use("/auth", authRoutes);
 
 app.get("/api/v1/health", (req, res) => {
   res.status(200).json({
