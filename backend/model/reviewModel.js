@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ALL_SENTIMENTS, SENTIMENTS } from "../config/sentiment.js";
 
 const reviewSchema = new mongoose.Schema(
   {
@@ -36,8 +37,8 @@ const reviewSchema = new mongoose.Schema(
     },
     aiSentiment: {
       type: String,
-      enum: ["POSITIVE", "NEUTRAL", "NEGATIVE", "PENDING"],
-      default: "PENDING",
+      enum: ALL_SENTIMENTS,
+      default: SENTIMENTS.PENDING,
       uppercase: true,
     },
     aiConfidence: {

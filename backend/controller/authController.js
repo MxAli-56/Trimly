@@ -1,7 +1,7 @@
 import * as registerService from "../services/auth/registerService.js";
 import * as loginService from "../services/auth/loginService.js";
 import * as passwordService from "../services/auth/passwordService.js";
-import User from "../models/User.js";
+import User from "../model/userModel.js";
 
 export const Register = async (req, res) => {
   try {

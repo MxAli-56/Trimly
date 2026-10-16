@@ -1,22 +1,23 @@
 import mongoose from "mongoose";
+import { ALL_STATUS_TYPES } from "../config/status.js";
 
 const statusSchema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: [true, "Status name is required"],
-      uppercase: true,
       trim: true,
+      uppercase: true,
     },
     type: {
       type: String,
       required: [true, "Status type is required"],
-      enum: ["BOOKING", "PAYMENT", "REFUND"],
+      enum: ALL_STATUS_TYPES,
       uppercase: true,
     },
-    displayLabel: {
+    description: {
       type: String,
-      required: [true, "Display label is required"],
+      default: "",
       trim: true,
     },
     deletedAt: {

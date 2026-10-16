@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ALL_ROLES, ROLES } from "../config/role.js";
 
 const userSchema = new mongoose.Schema(
   {
@@ -39,8 +40,8 @@ const userSchema = new mongoose.Schema(
     },
     roles: {
       type: [String],
-      enum: ["CUSTOMER", "BARBER", "SALON_OWNER", "ADMIN"],
-      default: ["CUSTOMER"],
+      enum: ALL_ROLES,
+      default: [ROLES.CUSTOMER],
     },
     isVerified: {
       type: Boolean,
@@ -77,9 +78,6 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
-
-userSchema.index({ email: 1 });
-userSchema.index({ phone: 1 });
 
 const User = mongoose.model("User", userSchema);
 

@@ -1,13 +1,21 @@
 import bcrypt from "bcrypt";
-import User from "../../models/User.js";
+import User from "../../model/userModel.js";
 import { generateAuthTokens } from "./tokenService.js";
 
 export const loginUser = async (credentials, reqDetails = {}) => {
-  const { email, password } = credentials;
+  const { identifier, email, phone, password } = credentials;
 
-  const user = await User.findOne({ email, deletedAt: null }).select(
-    "+password",
-  );
+  const loginQuery = identifier || email || phone;
+
+  if (!loginQuery) {
+    throw new Error("IDENTIFIER_REQUIRED");
+  }
+
+  const user = await User.findOne({
+    $or: [{ email: loginQuery.toLowerCase() }, { phone: loginQuery }],
+    deletedAt: null,
+  }).select("+password");
+
   if (!user) {
     throw new Error("INVALID_CREDENTIALS");
   }

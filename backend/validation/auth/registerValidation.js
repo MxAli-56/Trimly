@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { ALL_ROLES } from "../../config/role.js";
 
 const nameValidation = Joi.string()
   .pattern(/^[a-zA-Z\s'-]+$/)
@@ -16,10 +17,11 @@ export const registerSchema = Joi.object({
     "any.required": "Email is required",
   }),
   phone: Joi.string()
-    .pattern(/^[0-9+\s-]{10,15}$/)
+    .pattern(/^\+?[0-9]{11,13}$/)
     .required()
     .messages({
-      "string.pattern.base": "Please enter a valid phone number",
+      "string.pattern.base":
+        "Phone number must be between 11 and 13 digits",
       "any.required": "Phone number is required",
     }),
   password: Joi.string().min(6).required().messages({
@@ -27,6 +29,6 @@ export const registerSchema = Joi.object({
     "any.required": "Password is required",
   }),
   roles: Joi.array()
-    .items(Joi.string().valid("CUSTOMER", "BARBER", "SALON_OWNER", "ADMIN"))
+    .items(Joi.string().valid(...ALL_ROLES))
     .optional(),
 });

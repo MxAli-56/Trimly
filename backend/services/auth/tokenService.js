@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import AuthToken from "../../models/AuthToken.js";
+import AuthToken from "../../model/authTokenModel.js";
 
 export const generateAuthTokens = async (user, reqDetails = {}) => {
   const accessToken = jwt.sign(

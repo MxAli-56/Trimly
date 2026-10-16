@@ -9,7 +9,7 @@ import {
   updatePassword,
 } from '../controller/AuthController.js';
 import authenticate from '../middleware/Auth.js';
-import { validateBody } from '../validation/validateBody.js';
+import { validateBody } from '../validation/auth/validateBody.js';
 import { registerSchema } from '../validation/auth/registerValidation.js';
 import { loginSchema } from '../validation/auth/loginValidation.js';
 import {

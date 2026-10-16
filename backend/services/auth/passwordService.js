@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
-import User from "../../models/User.js";
+import User from "../../model/userModel.js";
 
 export const requestPasswordReset = async (email) => {
   const user = await User.findOne({ email, deletedAt: null });

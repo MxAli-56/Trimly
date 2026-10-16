@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
-import User from "../../models/User.js";
+import User from "../../model/userModel.js";
+import { ROLES } from "../../config/role.js";
 
 export const registerUser = async (userData) => {
   const existingEmail = await User.findOne({ email: userData.email });
@@ -22,7 +23,7 @@ export const registerUser = async (userData) => {
     roles:
       userData.roles && userData.roles.length > 0
         ? userData.roles
-        : ["CUSTOMER"],
+        : [ROLES.CUSTOMER],
   });
 
   return {
