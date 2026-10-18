@@ -1,9 +1,13 @@
+
 import {
   getCustomerProfile,
   updateCustomerProfile,
 } from "../services/customer/profileService.js";
 
-import { getSalons, getSalonById } from "../services/customer/salonService.js";
+import {
+  getSalons,
+  getSalonById,
+} from "../services/customer/salonService.js";
 
 import {
   getBranchCategories,
@@ -17,7 +21,9 @@ import {
   getBarberSchedule,
 } from "../services/customer/barberService.js";
 
-import { getBarberAvailability } from "../services/customer/availabilityService.js";
+import {
+  getBarberAvailability,
+} from "../services/customer/availabilityService.js";
 
 import {
   getFavorites,
@@ -31,7 +37,7 @@ import {
   createReview,
   getMyReviews,
   getBranchReviews,
-  getBarberReviews,
+  getBarberReviews as getBarberReviewsService,
 } from "../services/customer/reviewService.js";
 
 import {
@@ -53,8 +59,13 @@ import {
   getRecommendedSalons,
 } from "../services/customer/recommendationService.js";
 
-// Auth middleware se user ID ka actual format verify karna.
-const getAuthUserId = (req) => req.user?.id ?? req.user?._id ?? req.userId;
+import {
+  uploadProfilePhoto as uploadProfilePhotoService,
+} from "../services/customer/profilePhotoService.js";
+
+// Get authenticated user ID.
+const getAuthUserId = (req) =>
+  req.user?.id ?? req.user?._id ?? req.userId;
 
 const unauthorized = (res) =>
   res.status(401).json({
@@ -62,6 +73,7 @@ const unauthorized = (res) =>
     message: "Authentication required",
   });
 
+// Central error handler.
 const handleError = (res, error, feature) => {
   if (error.message === "NOT_IMPLEMENTED") {
     return res.status(501).json({
@@ -86,8 +98,13 @@ const handleError = (res, error, feature) => {
   });
 };
 
-// Reusable handler for service calls.
-const run = async (res, feature, serviceCall, statusCode = 200) => {
+// Reusable service handler.
+const run = async (
+  res,
+  feature,
+  serviceCall,
+  statusCode = 200
+) => {
   try {
     const data = await serviceCall();
 
@@ -100,12 +117,15 @@ const run = async (res, feature, serviceCall, statusCode = 200) => {
   }
 };
 
-// Customer profile
+// ==================== CUSTOMER PROFILE ====================
+
 export const getMyProfile = (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
-  return run(res, "getMyProfile", () => getCustomerProfile(userId));
+  return run(res, "getMyProfile", () =>
+    getCustomerProfile(userId)
+  );
 };
 
 export const updateMyProfile = (req, res) => {
@@ -113,58 +133,109 @@ export const updateMyProfile = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "updateMyProfile", () =>
-    updateCustomerProfile(userId, req.body),
+    updateCustomerProfile(userId, req.body)
   );
 };
 
-// Salon discovery
+// ==================== PROFILE PHOTO ====================
+
+export const uploadMyProfilePhoto = async (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  try {
+    const data = await uploadProfilePhotoService(
+      userId,
+      req.file
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile photo updated successfully",
+      data,
+    });
+  } catch (error) {
+    return handleError(
+      res,
+      error,
+      "uploadMyProfilePhoto"
+    );
+  }
+};
+
+// ==================== SALON DISCOVERY ====================
+
 export const getAllSalons = (req, res) =>
-  run(res, "getAllSalons", () => getSalons(req.query));
+  run(res, "getAllSalons", () =>
+    getSalons(req.query)
+  );
 
 export const getSalonDetails = (req, res) =>
-  run(res, "getSalonDetails", () => getSalonById(req.params.branchId));
+  run(res, "getSalonDetails", () =>
+    getSalonById(req.params.branchId)
+  );
 
-// Services
+// ==================== SERVICES ====================
+
 export const getSalonCategories = (req, res) =>
   run(res, "getSalonCategories", () =>
-    getBranchCategories(req.params.branchId),
+    getBranchCategories(req.params.branchId)
   );
 
 export const getSalonServices = (req, res) =>
   run(res, "getSalonServices", () =>
-    getBranchServices(req.params.branchId, req.query),
+    getBranchServices(req.params.branchId, req.query)
   );
 
 export const getServiceDetails = (req, res) =>
   run(res, "getServiceDetails", () =>
-    getServiceById(req.params.branchId, req.params.serviceId),
+    getServiceById(
+      req.params.branchId,
+      req.params.serviceId
+    )
   );
 
-// Barbers
+// ==================== BARBERS ====================
+
 export const getSalonBarbers = (req, res) =>
   run(res, "getSalonBarbers", () =>
-    getBranchBarbers(req.params.branchId, req.query),
+    getBranchBarbers(
+      req.params.branchId,
+      req.query
+    )
   );
 
 export const getBarberDetails = (req, res) =>
-  run(res, "getBarberDetails", () => getBarberById(req.params.barberId));
+  run(res, "getBarberDetails", () =>
+    getBarberById(req.params.barberId)
+  );
 
 export const getBarberScheduleDetails = (req, res) =>
   run(res, "getBarberScheduleDetails", () =>
-    getBarberSchedule(req.params.barberId, req.query),
+    getBarberSchedule(
+      req.params.barberId,
+      req.query
+    )
   );
 
 export const getBarberAvailableSlots = (req, res) =>
   run(res, "getBarberAvailableSlots", () =>
-    getBarberAvailability(req.params.barberId, req.query),
+    getBarberAvailability(
+      req.params.barberId,
+      req.query
+    )
   );
 
-// Favorites
+// ==================== FAVORITES ====================
+
 export const getMyFavorites = (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
-  return run(res, "getMyFavorites", () => getFavorites(userId));
+  return run(res, "getMyFavorites", () =>
+    getFavorites(userId)
+  );
 };
 
 export const addBranchToFavorites = (req, res) => {
@@ -174,8 +245,11 @@ export const addBranchToFavorites = (req, res) => {
   return run(
     res,
     "addBranchToFavorites",
-    () => addFavoriteBranch(userId, req.params.branchId),
-    201,
+    () => addFavoriteBranch(
+      userId,
+      req.params.branchId
+    ),
+    201
   );
 };
 
@@ -184,7 +258,10 @@ export const removeBranchFromFavorites = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "removeBranchFromFavorites", () =>
-    removeFavoriteBranch(userId, req.params.branchId),
+    removeFavoriteBranch(
+      userId,
+      req.params.branchId
+    )
   );
 };
 
@@ -195,8 +272,11 @@ export const addBarberToFavorites = (req, res) => {
   return run(
     res,
     "addBarberToFavorites",
-    () => addFavoriteBarber(userId, req.params.barberId),
-    201,
+    () => addFavoriteBarber(
+      userId,
+      req.params.barberId
+    ),
+    201
   );
 };
 
@@ -205,11 +285,15 @@ export const removeBarberFromFavorites = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "removeBarberFromFavorites", () =>
-    removeFavoriteBarber(userId, req.params.barberId),
+    removeFavoriteBarber(
+      userId,
+      req.params.barberId
+    )
   );
 };
 
-// Reviews
+// ==================== REVIEWS ====================
+
 export const createCustomerReview = (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
@@ -218,7 +302,7 @@ export const createCustomerReview = (req, res) => {
     res,
     "createCustomerReview",
     () => createReview(userId, req.body),
-    201,
+    201
   );
 };
 
@@ -226,25 +310,36 @@ export const getCustomerReviews = (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
-  return run(res, "getCustomerReviews", () => getMyReviews(userId, req.query));
+  return run(res, "getCustomerReviews", () =>
+    getMyReviews(userId, req.query)
+  );
 };
 
 export const getSalonReviews = (req, res) =>
   run(res, "getSalonReviews", () =>
-    getBranchReviews(req.params.branchId, req.query),
+    getBranchReviews(
+      req.params.branchId,
+      req.query
+    )
   );
 
 export const getBarberReviews = (req, res) =>
   run(res, "getBarberReviews", () =>
-    getBarberReviews(req.params.barberId, req.query),
+    getBarberReviewsService(
+      req.params.barberId,
+      req.query
+    )
   );
 
-// Loyalty
+// ==================== LOYALTY ====================
+
 export const getMyLoyaltySummary = (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
-  return run(res, "getMyLoyaltySummary", () => getLoyaltySummary(userId));
+  return run(res, "getMyLoyaltySummary", () =>
+    getLoyaltySummary(userId)
+  );
 };
 
 export const getMyLoyaltyHistory = (req, res) => {
@@ -252,17 +347,18 @@ export const getMyLoyaltyHistory = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getMyLoyaltyHistory", () =>
-    getLoyaltyHistory(userId, req.query),
+    getLoyaltyHistory(userId, req.query)
   );
 };
 
-// Chat
+// ==================== CHAT ====================
+
 export const getCustomerConversations = (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerConversations", () =>
-    getMyConversations(userId, req.query),
+    getMyConversations(userId, req.query)
   );
 };
 
@@ -274,16 +370,25 @@ export const createConversation = (req, res) => {
     res,
     "createConversation",
     () => startConversation(userId, req.body),
-    201,
+    201
   );
 };
 
-export const getConversationMessagesForCustomer = (req, res) => {
+export const getConversationMessagesForCustomer = (
+  req,
+  res
+) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
-  return run(res, "getConversationMessagesForCustomer", () =>
-    getConversationMessages(userId, req.params.conversationId, req.query),
+  return run(
+    res,
+    "getConversationMessagesForCustomer",
+    () => getConversationMessages(
+      userId,
+      req.params.conversationId,
+      req.query
+    )
   );
 };
 
@@ -294,39 +399,66 @@ export const sendCustomerMessage = (req, res) => {
   return run(
     res,
     "sendCustomerMessage",
-    () => sendMessage(userId, req.params.conversationId, req.body),
-    201,
+    () => sendMessage(
+      userId,
+      req.params.conversationId,
+      req.body
+    ),
+    201
   );
 };
 
-export const markCustomerConversationRead = (req, res) => {
+export const markCustomerConversationRead = (
+  req,
+  res
+) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
-  return run(res, "markCustomerConversationRead", () =>
-    markConversationRead(userId, req.params.conversationId),
+  return run(
+    res,
+    "markCustomerConversationRead",
+    () => markConversationRead(
+      userId,
+      req.params.conversationId
+    )
   );
 };
 
-// AI hairstyle recommendations
-export const requestHairstyleRecommendation = (req, res) => {
+// ==================== AI RECOMMENDATIONS ====================
+
+export const requestHairstyleRecommendation = (
+  req,
+  res
+) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
   return run(
     res,
     "requestHairstyleRecommendation",
-    () => createHairstyleRecommendation(userId, req.body),
-    201,
+    () => createHairstyleRecommendation(
+      userId,
+      req.body
+    ),
+    201
   );
 };
 
-export const getMyHairstyleRecommendations = (req, res) => {
+export const getMyHairstyleRecommendations = (
+  req,
+  res
+) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
-  return run(res, "getMyHairstyleRecommendations", () =>
-    getMyHairstyleRequests(userId, req.query),
+  return run(
+    res,
+    "getMyHairstyleRecommendations",
+    () => getMyHairstyleRequests(
+      userId,
+      req.query
+    )
   );
 };
 
@@ -335,6 +467,6 @@ export const getRecommendedSalonList = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getRecommendedSalonList", () =>
-    getRecommendedSalons(userId, req.query),
+    getRecommendedSalons(userId, req.query)
   );
 };

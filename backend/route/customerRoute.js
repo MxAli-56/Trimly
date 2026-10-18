@@ -33,10 +33,17 @@ import {
   getRecommendedSalonList,
 } from "../controller/customerController.js";
 
+
+
+import {
+  uploadMyProfilePhoto,
+} from "../controller/customerController.js";
+
+import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
 // IMPORTANT:
 // Apne middleware/Auth.js se actual authentication middleware import karein.
 // Neeche "authenticate" assumed export name hai; actual export verify karein.
-import { authenticate } from "../middleware/Auth.js";
+import authenticate from "../middleware/Auth.js";
 
 const router = express.Router();
 
@@ -58,6 +65,13 @@ router.get("/barbers/:barberId/reviews", getBarberReviewsController);
 // Authenticated customer routes
 router.get("/me", authenticate, getMyProfile);
 router.patch("/me", authenticate, updateMyProfile);
+
+router.patch(
+  "/me/profile-photo",
+  authenticate,
+  uploadProfilePhoto.single("profilePhoto"),
+  uploadMyProfilePhoto
+);  
 
 router.get("/me/favorites", authenticate, getMyFavorites);
 

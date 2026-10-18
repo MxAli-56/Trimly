@@ -11,7 +11,7 @@ import {
 // IMPORTANT:
 // Verify that this named export exists in your Auth.js.
 // If your middleware has a different name, use its actual export.
-import { authenticate } from "../middleware/Auth.js";
+import authenticate from "../middleware/Auth.js";
 
 const router = express.Router();
 
