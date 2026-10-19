@@ -14,7 +14,6 @@ export const requiredRoles = (...allowedRoles) => {
           },
         });
       }
-
       const user = await User.findById(userId).select("roles deletedAt");
 
       if (!user || user.deletedAt !== null) {
