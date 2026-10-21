@@ -1,6 +1,7 @@
 import * as registerService from "../services/auth/registerService.js";
 import * as loginService from "../services/auth/loginService.js";
 import * as passwordService from "../services/auth/passwordService.js";
+import * as otpService from "../services/auth/otpService.js";
 import User from "../model/userModel.js";
 
 export const Register = async (req, res) => {
@@ -173,6 +174,62 @@ export const updatePassword = async (req, res) => {
     return res.status(500).json({
       success: false,
       error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
+  }
+};
+
+export const SendOtp = async (req, res) => {
+  try {
+    const { phone } = req.body;
+    await otpService.sendOtp(phone);
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent successfully",
+    });
+  } catch (error) {
+    if (error.message === "COOLDOWN_ACTIVE") {
+      return res.status(429).json({
+        success: false,
+        error: {
+          code: "COOLDOWN_ACTIVE",
+          message: "Please wait 60 seconds before requesting a new OTP",
+        },
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Failed to send OTP" },
+    });
+  }
+};
+
+export const VerifyOtp = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+    await otpService.verifyOtp(phone, otp);
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified successfully",
+    });
+  } catch (error) {
+    const errorMap = {
+      OTP_NOT_FOUND: { status: 404, message: "No OTP found for this number" },
+      OTP_EXPIRED: { status: 400, message: "OTP has expired" },
+      MAX_ATTEMPTS_REACHED: { status: 429, message: "Too many attempts" },
+      INVALID_OTP: { status: 400, message: "Invalid OTP" },
+    };
+
+    const mapped = errorMap[error.message];
+    if (mapped) {
+      return res.status(mapped.status).json({
+        success: false,
+        error: { code: error.message, message: mapped.message },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Verification failed" },
     });
   }
 };

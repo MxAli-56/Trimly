@@ -22,7 +22,7 @@ const uploadProfilePhoto = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB maximum
+    fileSize: 5 * 1024 * 1024, 
     files: 1,
   },
 });

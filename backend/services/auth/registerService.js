@@ -24,6 +24,7 @@ export const registerUser = async (userData) => {
       userData.roles && userData.roles.length > 0
         ? userData.roles
         : [ROLES.CUSTOMER],
+    cnic: userData.cnic || undefined,
   });
 
   return {
@@ -32,5 +33,6 @@ export const registerUser = async (userData) => {
     email: newUser.email,
     phone: newUser.phone,
     roles: newUser.roles,
+    cnic: newUser.cnic
   };
 };

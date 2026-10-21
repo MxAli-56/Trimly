@@ -1,5 +1,5 @@
 import Joi from "joi";
-import { ALL_ROLES } from "../../config/role.js";
+import { ALL_ROLES, ROLES } from "../../config/role.js";
 
 const nameValidation = Joi.string()
   .pattern(/^[a-zA-Z\s'-]+$/)
@@ -20,8 +20,7 @@ export const registerSchema = Joi.object({
     .pattern(/^\+?[0-9]{11,13}$/)
     .required()
     .messages({
-      "string.pattern.base":
-        "Phone number must be between 11 and 13 digits",
+      "string.pattern.base": "Phone number must be between 11 and 13 digits",
       "any.required": "Phone number is required",
     }),
   password: Joi.string().min(6).required().messages({
@@ -31,4 +30,15 @@ export const registerSchema = Joi.object({
   roles: Joi.array()
     .items(Joi.string().valid(...ALL_ROLES))
     .optional(),
+  cnic: Joi.string()
+    .pattern(/^\d{5}-\d{7}-\d$/)
+    .when("roles", {
+      is: Joi.array().items(Joi.string().valid(ROLES.SALON_OWNER)),
+      then: Joi.required(),
+      otherwise: Joi.optional(),
+    })
+    .messages({
+      "string.pattern.base": "CNIC must be in format 42101-1234567-8.",
+      "any.required": "CNIC is required for salon owners.",
+    }),
 });

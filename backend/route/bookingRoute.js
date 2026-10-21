@@ -8,14 +8,10 @@ import {
   rescheduleCustomerBooking,
 } from "../controller/bookingController.js";
 
-// IMPORTANT:
-// Verify that this named export exists in your Auth.js.
-// If your middleware has a different name, use its actual export.
 import authenticate from "../middleware/Auth.js";
 
 const router = express.Router();
 
-// All booking routes require authentication.
 router.use(authenticate);
 
 router.post("/", createCustomerBooking);
