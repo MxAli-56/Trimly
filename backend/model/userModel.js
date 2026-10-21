@@ -38,6 +38,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    profilePhotoPublicId: {
+      type: String,
+      default: null,
+    },
     roles: {
       type: [String],
       enum: ALL_ROLES,
