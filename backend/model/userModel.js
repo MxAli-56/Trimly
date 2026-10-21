@@ -29,6 +29,17 @@ const userSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    cnic: {
+  type: String,
+  required: function() { return this.roles.includes(ROLES.SALON_OWNER); },
+  validate: {
+    validator: function(v) {
+      if (!v && !this.roles.includes(ROLES.SALON_OWNER)) return true;
+      return /^\d{5}-\d{7}-\d$/.test(v); 
+    },
+    message: 'Invalid CNIC format'
+  }
+},
     password: {
       type: String,
       required: [true, "Password is required"],
