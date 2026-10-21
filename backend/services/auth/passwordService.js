@@ -1,9 +1,9 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
-import User from "../../model/userModel.js";
+import * as userRepository from "../../repository/userRepository.js";
 
 export const requestPasswordReset = async (email) => {
-  const user = await User.findOne({ email, deletedAt: null });
+  const user = await userRepository.findByEmailNotDeleted(email);
   if (!user) {
     return { success: true };
   }
@@ -11,9 +11,10 @@ export const requestPasswordReset = async (email) => {
   const resetToken = crypto.randomBytes(32).toString("hex");
   const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
-  user.resetToken = resetToken;
-  user.resetTokenExpiry = resetTokenExpiry;
-  await user.save();
+  await userRepository.updateUserById(user._id, {
+    resetToken,
+    resetTokenExpiry,
+  });
 
   return {
     email: user.email,
@@ -22,7 +23,7 @@ export const requestPasswordReset = async (email) => {
 };
 
 export const verifyResetTokenService = async (token) => {
-  const user = await User.findOne({ resetToken: token, deletedAt: null });
+  const user = await userRepository.findByResetToken(token);
 
   if (!user) {
     return { valid: false, message: "Invalid or expired reset token" };
@@ -36,7 +37,7 @@ export const verifyResetTokenService = async (token) => {
 };
 
 export const resetPasswordWithToken = async (token, newPassword) => {
-  const user = await User.findOne({ resetToken: token, deletedAt: null });
+  const user = await userRepository.findByResetToken(token);
 
   if (
     !user ||
@@ -48,24 +49,27 @@ export const resetPasswordWithToken = async (token, newPassword) => {
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-  user.password = hashedPassword;
-  user.resetToken = null;
-  user.resetTokenExpiry = null;
-  await user.save();
+  await userRepository.updateUserById(user._id, {
+    password: hashedPassword,
+    resetToken: null,
+    resetTokenExpiry: null,
+  });
 
   return { success: true };
 };
 
 export const updateUserPassword = async (userId, newPassword) => {
-  const user = await User.findById(userId);
+  const user = await userRepository.findById(userId);
 
   if (!user || user.deletedAt !== null) {
     throw new Error("USER_NOT_FOUND");
   }
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
-  user.password = hashedPassword;
-  await user.save();
+
+  await userRepository.updateUserById(userId, {
+    password: hashedPassword,
+  });
 
   return { success: true };
 };

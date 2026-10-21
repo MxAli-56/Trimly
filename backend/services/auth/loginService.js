@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import User from "../../model/userModel.js";
+import * as userRepository from "../../repository/userRepository.js";
 import { generateAuthTokens } from "./tokenService.js";
 
 export const loginUser = async (credentials, reqDetails = {}) => {
@@ -11,10 +11,7 @@ export const loginUser = async (credentials, reqDetails = {}) => {
     throw new Error("IDENTIFIER_REQUIRED");
   }
 
-  const user = await User.findOne({
-    $or: [{ email: loginQuery.toLowerCase() }, { phone: loginQuery }],
-    deletedAt: null,
-  }).select("+password");
+  const user = await userRepository.findByEmailOrPhone(loginQuery);
 
   if (!user) {
     throw new Error("INVALID_CREDENTIALS");

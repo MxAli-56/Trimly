@@ -2,12 +2,11 @@
 
 backend/
 ├── config/         # db.js, env configs
-├── enums/          # Constants / Enums
-├── models/         # Mongoose Schemas (Collection Blueprints)
-├── controllers/    # Route Logic
-├── routes/         # Endpoints
-├── middlewares/    # Auth, Validation Bouncers
-├── validations/    # Joi Schema Rules
+├── model/         # Mongoose Schemas (Collection Blueprints)
+├── controller/    # Route Logic
+├── route/         # Endpoints
+├── middleware/    # Auth, Validation Bouncers
+├── validation/    # Joi Schema Rules
 ├── services/       # Heavy Business Logic (Tokens, Payments)
 ├── utils/          # Helpers (API Response format)
 ├── scripts/        # Seeder scripts

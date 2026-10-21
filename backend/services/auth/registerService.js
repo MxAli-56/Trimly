@@ -1,21 +1,21 @@
 import bcrypt from "bcrypt";
-import User from "../../model/userModel.js";
+import * as userRepository from "../../repository/userRepository.js";
 import { ROLES } from "../../config/role.js";
 
 export const registerUser = async (userData) => {
-  const existingEmail = await User.findOne({ email: userData.email });
+  const existingEmail = await userRepository.findByEmail(userData.email);
   if (existingEmail) {
     throw new Error("EMAIL_EXISTS");
   }
 
-  const existingPhone = await User.findOne({ phone: userData.phone });
+  const existingPhone = await userRepository.findByPhone(userData.phone);
   if (existingPhone) {
     throw new Error("PHONE_EXISTS");
   }
 
   const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-  const newUser = await User.create({
+  const newUser = await userRepository.createUser({
     name: userData.name,
     email: userData.email,
     phone: userData.phone,

@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import AuthToken from "../../model/authTokenModel.js";
+import * as authTokenRepository from "../../repository/authTokenRepository.js";
 
 export const generateAuthTokens = async (user, reqDetails = {}) => {
   const accessToken = jwt.sign(
@@ -9,8 +9,8 @@ export const generateAuthTokens = async (user, reqDetails = {}) => {
       email: user.email,
       roles: user.roles,
     },
-    process.env.JWT_ACCESS_SECRET || "trimly_access_secret_key_2026",
-    { expiresIn: process.env.JWT_ACCESS_EXPIRY || "1h" },
+    process.env.JWT_ACCESS_SECRET,
+    { expiresIn: process.env.JWT_ACCESS_EXPIRY },
   );
 
   const rawRefreshToken = crypto.randomBytes(40).toString("hex");
@@ -19,10 +19,10 @@ export const generateAuthTokens = async (user, reqDetails = {}) => {
     .update(rawRefreshToken)
     .digest("hex");
 
-  const expiryDays = Number(process.env.REFRESH_TOKEN_EXPIRY_DAYS) || 7;
+  const expiryDays = Number(process.env.REFRESH_TOKEN_EXPIRY_DAYS);
   const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
 
-  await AuthToken.create({
+  await authTokenRepository.createAuthToken({
     userId: user._id,
     refreshTokenHash,
     ipAddress: reqDetails.ip || null,
