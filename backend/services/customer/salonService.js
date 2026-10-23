@@ -1,9 +1,42 @@
-export const getSalons = async (filters = {}) => {
-  // TODO: Get active salons/branches with filters and pagination.
-  throw new Error("NOT_IMPLEMENTED");
+import mongoose from "mongoose";
+import * as branchRepository from "../../repository/branchRepository.js";
+
+export const getSalons = async (query = {}) => {
+  const filters = {};
+
+  if (query.city) {
+    filters.city = query.city.trim();
+  }
+
+  if (query.area) {
+    filters.area = query.area.trim();
+  }
+
+  if (query.isOpen !== undefined) {
+    filters.isOpen = query.isOpen === "true";
+  }
+
+  const salons =
+    await branchRepository.findAllActiveBranches(filters);
+
+  return salons;
 };
 
 export const getSalonById = async (branchId) => {
-  // TODO: Find one active branch by ID.
-  throw new Error("NOT_IMPLEMENTED");
+  if (!mongoose.Types.ObjectId.isValid(branchId)) {
+    const error = new Error("Invalid salon ID");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const salon =
+    await branchRepository.findBranchById(branchId);
+
+  if (!salon) {
+    const error = new Error("Salon not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return salon;
 };
