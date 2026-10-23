@@ -41,3 +41,43 @@ export const findBranchById = async (branchId) => {
     "name address area city isOpen avgRating ratingCount ownerId createdAt updatedAt",
   );
 };
+
+export const searchBranches = async (searchText) => {
+  return await Branch.find({
+    deletedAt: null,
+
+    $or: [
+      {
+        name: {
+          $regex: searchText,
+          $options: "i",
+        },
+      },
+      {
+        area: {
+          $regex: searchText,
+          $options: "i",
+        },
+      },
+      {
+        city: {
+          $regex: searchText,
+          $options: "i",
+        },
+      },
+      {
+        address: {
+          $regex: searchText,
+          $options: "i",
+        },
+      },
+    ],
+  })
+    .select(
+      "name address area city isOpen avgRating ratingCount ownerId createdAt updatedAt",
+    )
+    .sort({
+      avgRating: -1,
+      createdAt: -1,
+    });
+};

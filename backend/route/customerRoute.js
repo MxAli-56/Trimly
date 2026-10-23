@@ -4,6 +4,7 @@ import {
   getMyProfile,
   updateMyProfile,
   getAllSalons,
+  searchSalons,
   getSalonDetails,
   getSalonCategories,
   getSalonServices,
@@ -40,46 +41,30 @@ import authenticate from "../middleware/Auth.js";
 const router = express.Router();
 
 router.get("/salons", authenticate, getAllSalons);
+router.get("/salons/search", authenticate, searchSalons);
+
+router.get("/salons/:branchId", authenticate, getSalonDetails);
 router.get("/salons/:branchId", authenticate, getSalonDetails);
 
 router.get("/salons/:branchId/categories", getSalonCategories);
 router.get("/salons/:branchId/services", getSalonServices);
-router.get(
-  "/salons/:branchId/services/:serviceId",
-  getServiceDetails,
-);
+router.get("/salons/:branchId/services/:serviceId", getServiceDetails);
 
 router.get("/salons/:branchId/barbers", getSalonBarbers);
 
 router.get("/barbers/:barberId", getBarberDetails);
 
-router.get(
-  "/barbers/:barberId/schedule",
-  getBarberScheduleDetails,
-);
+router.get("/barbers/:barberId/schedule", getBarberScheduleDetails);
 
-router.get(
-  "/barbers/:barberId/availability",
-  getBarberAvailableSlots,
-);
+router.get("/barbers/:barberId/availability", getBarberAvailableSlots);
 
-router.get(
-  "/salons/:branchId/reviews",
-  getSalonReviews,
-);
+router.get("/salons/:branchId/reviews", getSalonReviews);
 
-router.get(
-  "/barbers/:barberId/reviews",
-  getBarberReviewsController,
-);
+router.get("/barbers/:barberId/reviews", getBarberReviewsController);
 
 router.get("/me", authenticate, getMyProfile);
 
-router.patch(
-  "/me",
-  authenticate,
-  updateMyProfile,
-);
+router.patch("/me", authenticate, updateMyProfile);
 
 router.patch(
   "/me/profile-photo",
@@ -88,11 +73,7 @@ router.patch(
   uploadMyProfilePhoto,
 );
 
-router.get(
-  "/me/favorites",
-  authenticate,
-  getMyFavorites,
-);
+router.get("/me/favorites", authenticate, getMyFavorites);
 
 router.post(
   "/me/favorites/branches/:branchId",
@@ -118,41 +99,17 @@ router.delete(
   removeBarberFromFavorites,
 );
 
-router.post(
-  "/me/reviews",
-  authenticate,
-  createCustomerReview,
-);
+router.post("/me/reviews", authenticate, createCustomerReview);
 
-router.get(
-  "/me/reviews",
-  authenticate,
-  getCustomerReviews,
-);
+router.get("/me/reviews", authenticate, getCustomerReviews);
 
-router.get(
-  "/me/loyalty",
-  authenticate,
-  getMyLoyaltySummary,
-);
+router.get("/me/loyalty", authenticate, getMyLoyaltySummary);
 
-router.get(
-  "/me/loyalty/history",
-  authenticate,
-  getMyLoyaltyHistory,
-);
+router.get("/me/loyalty/history", authenticate, getMyLoyaltyHistory);
 
-router.get(
-  "/me/conversations",
-  authenticate,
-  getCustomerConversations,
-);
+router.get("/me/conversations", authenticate, getCustomerConversations);
 
-router.post(
-  "/me/conversations",
-  authenticate,
-  createConversation,
-);
+router.post("/me/conversations", authenticate, createConversation);
 
 router.get(
   "/me/conversations/:conversationId/messages",
@@ -184,10 +141,6 @@ router.get(
   getMyHairstyleRecommendations,
 );
 
-router.get(
-  "/me/recommended-salons",
-  authenticate,
-  getRecommendedSalonList,
-);
+router.get("/me/recommended-salons", authenticate, getRecommendedSalonList);
 
 export default router;

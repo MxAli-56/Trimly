@@ -22,6 +22,20 @@ export const getSalons = async (query = {}) => {
   return salons;
 };
 
+export const searchSalons = async (searchText) => {
+  if (!searchText || !searchText.trim()) {
+    const error = new Error("Search text is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const salons = await branchRepository.searchBranches(
+    searchText.trim(),
+  );
+
+  return salons;
+};
+
 export const getSalonById = async (branchId) => {
   if (!mongoose.Types.ObjectId.isValid(branchId)) {
     const error = new Error("Invalid salon ID");
