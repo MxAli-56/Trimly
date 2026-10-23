@@ -36,6 +36,19 @@ export const searchSalons = async (searchText) => {
   return salons;
 };
 
+export const filterSalonsByArea = async (area) => {
+  if (!area || !area.trim()) {
+    const error = new Error("Area is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const salons =
+    await branchRepository.findBranchesByArea(area.trim());
+
+  return salons;
+};
+
 export const getSalonById = async (branchId) => {
   if (!mongoose.Types.ObjectId.isValid(branchId)) {
     const error = new Error("Invalid salon ID");

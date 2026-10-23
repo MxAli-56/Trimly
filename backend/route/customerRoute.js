@@ -5,6 +5,7 @@ import {
   updateMyProfile,
   getAllSalons,
   searchSalons,
+  filterSalonsByArea,
   getSalonDetails,
   getSalonCategories,
   getSalonServices,
@@ -41,7 +42,12 @@ import authenticate from "../middleware/Auth.js";
 const router = express.Router();
 
 router.get("/salons", authenticate, getAllSalons);
+
 router.get("/salons/search", authenticate, searchSalons);
+
+router.get("/salons/filter/area", authenticate, filterSalonsByArea);
+
+router.get("/salons/:branchId", authenticate, getSalonDetails);
 
 router.get("/salons/:branchId", authenticate, getSalonDetails);
 router.get("/salons/:branchId", authenticate, getSalonDetails);

@@ -81,3 +81,20 @@ export const searchBranches = async (searchText) => {
       createdAt: -1,
     });
 };
+
+export const findBranchesByArea = async (area) => {
+  return await Branch.find({
+    deletedAt: null,
+    area: {
+      $regex: area,
+      $options: "i",
+    },
+  })
+    .select(
+      "name address area city isOpen avgRating ratingCount ownerId createdAt updatedAt",
+    )
+    .sort({
+      avgRating: -1,
+      createdAt: -1,
+    });
+};

@@ -6,6 +6,7 @@ import {
 import {
   getSalons,
   searchSalons as searchSalonsService,
+  filterSalonsByArea as filterSalonsByAreaService,
   getSalonById,
 } from "../services/customer/salonService.js";
 
@@ -152,6 +153,11 @@ export const getAllSalons = (req, res) =>
 
 export const searchSalons = (req, res) =>
   run(res, "searchSalons", () => searchSalonsService(req.query.q));
+
+export const filterSalonsByArea = (req, res) =>
+  run(res, "filterSalonsByArea", () =>
+    filterSalonsByAreaService(req.query.area)
+  );
 
 export const getSalonDetails = (req, res) =>
   run(res, "getSalonDetails", () => getSalonById(req.params.branchId));
