@@ -53,7 +53,7 @@ router.get("/salons/:branchId", authenticate, getSalonDetails);
 router.get("/salons/:branchId", authenticate, getSalonDetails);
 
 router.get("/salons/:branchId/categories", getSalonCategories);
-router.get("/salons/:branchId/services", getSalonServices);
+router.get("/salons/:branchId/services", authenticate, getSalonServices);
 router.get("/salons/:branchId/services/:serviceId", getServiceDetails);
 
 router.get("/salons/:branchId/barbers", getSalonBarbers);
