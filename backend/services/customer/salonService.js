@@ -50,6 +50,12 @@ export const filterSalonsByArea = async (area) => {
 };
 
 export const getSalonById = async (branchId) => {
+  if (!branchId) {
+    const error = new Error("Salon ID is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
   if (!mongoose.Types.ObjectId.isValid(branchId)) {
     const error = new Error("Invalid salon ID");
     error.statusCode = 400;

@@ -156,7 +156,7 @@ export const searchSalons = (req, res) =>
 
 export const filterSalonsByArea = (req, res) =>
   run(res, "filterSalonsByArea", () =>
-    filterSalonsByAreaService(req.query.area)
+    filterSalonsByAreaService(req.query.area),
   );
 
 export const getSalonDetails = (req, res) =>
