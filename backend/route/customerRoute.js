@@ -22,7 +22,7 @@ import {
   createCustomerReview,
   getCustomerReviews,
   getSalonReviews,
-  getBarberReviews as getBarberReviewsController,
+  getBarberReviews,
   getMyLoyaltySummary,
   getMyLoyaltyHistory,
   getCustomerConversations,
@@ -70,7 +70,7 @@ router.get("/barbers/:barberId/availability", getBarberAvailableSlots);
 
 router.get("/salons/:branchId/reviews", getSalonReviews);
 
-router.get("/barbers/:barberId/reviews", getBarberReviewsController);
+router.get("/barbers/:barberId/reviews", authenticate, getBarberReviews);
 
 router.get("/me", authenticate, getMyProfile);
 

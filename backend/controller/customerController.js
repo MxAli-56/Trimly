@@ -251,7 +251,6 @@ export const removeBarberFromFavorites = (req, res) => {
 };
 
 // ==================== REVIEWS ====================
-
 export const createCustomerReview = (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
