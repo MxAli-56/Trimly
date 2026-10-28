@@ -4,7 +4,11 @@
 .env.production
 *.env
 
-# Dependency Folders
+# Frontend
+frontend/node_modules
+frontend/.env
+
+# Backend
 node_modules/
 backend/node_modules/
 
@@ -26,4 +30,6 @@ uploads/
 backend/uploads/
 
 Trimly.md
-Gemini.md
+LLM.md
+ParallelGithubWork.md
+ProjectUnderstanding.md
