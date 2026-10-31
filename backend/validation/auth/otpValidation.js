@@ -1,23 +1,35 @@
 import Joi from "joi";
+import { ROLES } from "../../config/role.js";
 
-const phoneSchema = Joi.string()
-  .pattern(/^\+?[0-9]{11,13}$/)
-  .required()
-  .messages({
-    "string.pattern.base": "Please enter a valid phone number (11-13 digits).",
-    "string.empty": "Phone number is required.",
-    "any.required": "Phone number is required.",
-  });
-
-export const sendOtpSchema = Joi.object({
-  phone: phoneSchema,
-});
+const ALLOWED_PUBLIC_ROLES = [ROLES.CUSTOMER, ROLES.BARBER, ROLES.SALON_OWNER];
 
 export const verifyOtpSchema = Joi.object({
-  phone: phoneSchema,
-  otp: Joi.string().length(6).required().messages({
-    "string.length": "OTP must be exactly 6 digits.",
-    "string.empty": "OTP is required.",
-    "any.required": "OTP is required.",
+  idToken: Joi.string().required().messages({
+    "any.required": "Firebase token is required",
   }),
+  name: Joi.string().required().messages({
+    "any.required": "Name is required",
+  }),
+  email: Joi.string().email().required().messages({
+    "string.email": "Please enter a valid email address",
+    "any.required": "Email is required",
+  }),
+  password: Joi.string().min(6).required().messages({
+    "string.min": "Password must be at least 6 characters long",
+    "any.required": "Password is required",
+  }),
+  roles: Joi.array()
+    .items(Joi.string().valid(...ALLOWED_PUBLIC_ROLES)) // Admin is NOT in this list
+    .optional(),
+  cnic: Joi.string()
+    .pattern(/^\d{5}-\d{7}-\d$/)
+    .when("roles", {
+      is: Joi.array().items(Joi.string().valid(ROLES.SALON_OWNER)),
+      then: Joi.required(),
+      otherwise: Joi.optional(),
+    })
+    .messages({
+      "string.pattern.base": "CNIC must be in format 42101-1234567-8.",
+      "any.required": "CNIC is required for salon owners.",
+    }),
 });

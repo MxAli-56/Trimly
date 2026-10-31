@@ -7,11 +7,10 @@ import {
   verifyResetToken,
   ResetPassword,
   updatePassword,
-  SendOtp,
   VerifyOtp
 } from '../controller/AuthController.js';
 import authenticate from '../middleware/Auth.js';
-import { validateBody } from '../middleware/validateBody.js'; // Path updated
+import { validateBody } from '../middleware/validateBody.js'; 
 import { registerSchema } from '../validation/auth/registerValidation.js';
 import { loginSchema } from '../validation/auth/loginValidation.js';
 import {
@@ -30,7 +29,6 @@ router.post('/forgot-password', validateBody(forgotPasswordSchema), ForgotPasswo
 router.get('/verify-reset-token/:token', verifyResetToken);
 router.post('/reset-password', validateBody(resetPasswordSchema), ResetPassword);
 router.patch('/update-password', authenticate, validateBody(updatePasswordSchema), updatePassword);
-router.post("/send-otp", validateBody(sendOtpSchema), SendOtp);
 router.post("/verify-otp", validateBody(verifyOtpSchema), VerifyOtp); 
 
 export default router;
