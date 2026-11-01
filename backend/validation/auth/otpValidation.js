@@ -19,7 +19,7 @@ export const verifyOtpSchema = Joi.object({
     "any.required": "Password is required",
   }),
   roles: Joi.array()
-    .items(Joi.string().valid(...ALLOWED_PUBLIC_ROLES)) // Admin is NOT in this list
+    .items(Joi.string().valid(...ALLOWED_PUBLIC_ROLES)) 
     .optional(),
   cnic: Joi.string()
     .pattern(/^\d{5}-\d{7}-\d$/)

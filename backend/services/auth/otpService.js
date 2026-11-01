@@ -1,18 +1,18 @@
-import admin from "../../config/firebase.js";
+import adminAuth from "../../config/firebase.js";
 import bcrypt from "bcrypt";
 import * as userRepository from "../../repository/userRepository.js";
 import { normalizePhoneForDB } from "../../utils/phoneFormatter.js";
 import { ROLES } from "../../config/role.js";
 
-export const registerWithOtp = async (idToken, userData) => {
-  const decodedToken = await admin.auth().verifyIdToken(idToken);
+const verifyTokenAndGetPhone = async (idToken) => {
+  const decodedToken = await adminAuth.verifyIdToken(idToken);
   const firebasePhone = decodedToken.phone_number;
+  if (!firebasePhone) throw new Error("NO_PHONE_NUMBER");
+  return normalizePhoneForDB(firebasePhone);
+};
 
-  if (!firebasePhone) {
-    throw new Error("NO_PHONE_NUMBER");
-  }
-
-  const localPhone = normalizePhoneForDB(firebasePhone);
+export const registerWithOtp = async (idToken, userData) => {
+  const localPhone = await verifyTokenAndGetPhone(idToken);
 
   const existingPhone = await userRepository.findByPhone(localPhone);
   if (existingPhone) {

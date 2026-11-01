@@ -18,7 +18,7 @@ import {
   resetPasswordSchema,
   updatePasswordSchema,
 } from '../validation/auth/passwordValidation.js';
-import { sendOtpSchema, verifyOtpSchema } from '../validation/auth/otpValidation.js';
+import { verifyOtpSchema } from '../validation/auth/otpValidation.js';
 
 const router = express.Router();
 

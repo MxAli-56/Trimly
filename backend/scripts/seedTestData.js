@@ -36,10 +36,7 @@ const seedTestData = async () => {
     });
 
     if (!owner) {
-      const hashedPassword = await bcrypt.hash(
-        "Test@123",
-        10,
-      );
+      const hashedPassword = await bcrypt.hash("Test@123", 10);
 
       owner = await User.create({
         name: "Test Salon Owner",
@@ -66,10 +63,7 @@ const seedTestData = async () => {
     });
 
     if (!customer) {
-      const hashedPassword = await bcrypt.hash(
-        "Test@123",
-        10,
-      );
+      const hashedPassword = await bcrypt.hash("Test@123", 10);
 
       customer = await User.create({
         name: "Test Customer",
@@ -218,13 +212,9 @@ const seedTestData = async () => {
       if (!existingService) {
         await Service.create(serviceData);
 
-        console.log(
-          `✅ Service created: ${serviceData.name}`,
-        );
+        console.log(`✅ Service created: ${serviceData.name}`);
       } else {
-        console.log(
-          `ℹ️ Service already exists: ${serviceData.name}`,
-        );
+        console.log(`ℹ️ Service already exists: ${serviceData.name}`);
       }
     }
 
@@ -237,10 +227,7 @@ const seedTestData = async () => {
     });
 
     if (!barber) {
-      const hashedPassword = await bcrypt.hash(
-        "Test@123",
-        10,
-      );
+      const hashedPassword = await bcrypt.hash("Test@123", 10);
 
       barber = await User.create({
         name: "Ali Barber",
@@ -271,11 +258,7 @@ const seedTestData = async () => {
         userId: barber._id,
         branchId: branch._id,
         bio: "Professional barber with modern styling experience",
-        specialties: [
-          "Haircut",
-          "Beard Trim",
-          "Hair Styling",
-        ],
+        specialties: ["Haircut", "Beard Trim", "Hair Styling"],
         isAvailable: true,
         avgRating: 4.7,
         ratingCount: 45,
@@ -301,12 +284,11 @@ const seedTestData = async () => {
     ];
 
     for (const day of schedule) {
-      const existingSchedule =
-        await BarberSchedule.findOne({
-          barberProfileId: barberProfile._id,
-          dayOfWeek: day,
-          deletedAt: null,
-        });
+      const existingSchedule = await BarberSchedule.findOne({
+        barberProfileId: barberProfile._id,
+        dayOfWeek: day,
+        deletedAt: null,
+      });
 
       if (!existingSchedule) {
         await BarberSchedule.create({
@@ -320,10 +302,32 @@ const seedTestData = async () => {
           deletedAt: null,
         });
 
-        console.log(
-          `✅ Barber schedule created: ${day}`,
-        );
+        console.log(`✅ Barber schedule created: ${day}`);
       }
+    }
+
+    // =========================
+    // ADMIN
+    // =========================
+
+    let admin = await User.findOne({
+      email: "admin@trimly.com",
+    });
+
+    if (!admin) {
+      const hashedPassword = await bcrypt.hash("Admin@123", 10);
+      admin = await User.create({
+        name: "Trimly Admin",
+        email: "admin@trimly.com",
+        phone: "03000000000",
+        password: hashedPassword,
+        roles: ["ADMIN"],
+        isVerified: true,
+        deletedAt: null,
+      });
+      console.log("✅ Test admin created");
+    } else {
+      console.log("ℹ️ Test admin already exists");
     }
 
     // =========================
@@ -377,7 +381,6 @@ const seedTestData = async () => {
 
     console.log("");
     console.log("=================================");
-
   } catch (error) {
     console.error("");
     console.error("❌ SEEDING FAILED");

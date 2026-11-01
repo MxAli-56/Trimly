@@ -1,17 +1,14 @@
 import express from "express";
-import dotenv from "dotenv";
+import "dotenv/config";
 import cors from "cors";
 import helmet from "helmet";
 import connectDB from "./config/db.js";
 import authRoutes from "./route/authRoute.js";
 import customerRoute from "./route/customerRoute.js";
 import bookingRoute from "./route/bookingRoute.js";
-import "dotenv/config";
-import { setServers } from "dns";
-dotenv.config({ path: "../.env" });
 
 const app = express();
-setServers(["8.8.8.8", "1.1.1.1"]);
+
 app.use(helmet());
 app.use(cors());
 app.use(express.json());

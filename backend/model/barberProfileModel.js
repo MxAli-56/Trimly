@@ -48,7 +48,6 @@ const barberProfileSchema = new mongoose.Schema(
   },
 );
 
-barberProfileSchema.index({ userId: 1 });
 barberProfileSchema.index({ branchId: 1 });
 
 const BarberProfile = mongoose.model("BarberProfile", barberProfileSchema);
