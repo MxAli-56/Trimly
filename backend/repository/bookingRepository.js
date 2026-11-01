@@ -45,3 +45,38 @@ export const findBookingStatuses = async () => {
     deletedAt: null,
   }).lean();
 };
+
+
+
+export const findBookingsByCustomer = async (
+  customerId,
+  { page = 1, limit = 10 } = {}
+) => {
+  const skip = (page - 1) * limit;
+
+  const filter = {
+    customerId,
+    deletedAt: null,
+  };
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate("branchId", "name address")
+      .populate("barberId", "name profilePhoto")
+      .populate("statusId", "name type")
+      .sort({ bookingDate: -1, startTime: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+
+    Booking.countDocuments(filter),
+  ]);
+
+  return {
+    bookings,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+};
