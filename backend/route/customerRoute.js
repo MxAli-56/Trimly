@@ -45,6 +45,7 @@ import {
   getAvailableDates,
   getAvailableSlots,
   checkSlotAvailability,
+  getSuggestedSlots,
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -146,6 +147,12 @@ router.get(
   "/barbers/:barberId/check-slot",
   authenticate,
   checkSlotAvailability
+);
+
+router.get(
+  "/barbers/:barberId/suggested-slots",
+  authenticate,
+  getSuggestedSlots
 );
 
 router.get("/barbers/:barberId/reviews", authenticate, getBarberReviews);

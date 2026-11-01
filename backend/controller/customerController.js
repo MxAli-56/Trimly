@@ -5,22 +5,15 @@ import {
 import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services/customer/salonOpeningHoursService.js";
 import { getServicePrice as getServicePriceService } from "../services/customer/servicePriceService.js";
 import { getAllServices as getAllServicesService } from "../services/customer/allServicesService.js";
-import {
-  getAvailableSlots as getAvailableSlotsService,
-} from "../services/customer/availableSlotsService.js";
+import { getSuggestedSlots as getSuggestedSlotsService } from "../services/customer/suggestedSlotsService.js";
 
-import {
-  checkSlotAvailability as checkSlotAvailabilityService,
-} from "../services/customer/checkSlotAvailabilityService.js";
-import {
-  getBarberAvailabilityStatus as getBarberAvailabilityStatusService,
-} from "../services/customer/barberAvailabilityStatusService.js";
-import {
-  getBarberRating as getBarberRatingService,
-} from "../services/customer/barberRatingService.js";
+import { getAvailableSlots as getAvailableSlotsService } from "../services/customer/availableSlotsService.js";
+
+import { checkSlotAvailability as checkSlotAvailabilityService } from "../services/customer/checkSlotAvailabilityService.js";
+import { getBarberAvailabilityStatus as getBarberAvailabilityStatusService } from "../services/customer/barberAvailabilityStatusService.js";
+import { getBarberRating as getBarberRatingService } from "../services/customer/barberRatingService.js";
 import { searchServices as searchServicesService } from "../services/customer/searchServicesService.js";
 import { getServicesByCategory as getServicesByCategoryService } from "../services/customer/servicesByCategoryService.js";
-
 
 import { getSalonReviews as getSalonReviewsService } from "../services/customer/salonService.js";
 import {
@@ -44,9 +37,7 @@ import {
 
 import { getBarberAvailability } from "../services/customer/availabilityService.js";
 
-import {
-  getAvailableDates as getAvailableDatesService,
-} from "../services/customer/availableDatesService.js";
+import { getAvailableDates as getAvailableDatesService } from "../services/customer/availableDatesService.js";
 
 import {
   getFavorites,
@@ -526,8 +517,6 @@ export const getServicePrice = async (req, res) => {
   }
 };
 
-
-
 export const getBarberRating = async (req, res) => {
   try {
     const { barberId } = req.params;
@@ -548,8 +537,7 @@ export const getBarberAvailabilityStatus = async (req, res) => {
   try {
     const { barberId } = req.params;
 
-    const data =
-      await getBarberAvailabilityStatusService(barberId);
+    const data = await getBarberAvailabilityStatusService(barberId);
 
     return res.status(200).json({
       success: true,
@@ -557,38 +545,26 @@ export const getBarberAvailabilityStatus = async (req, res) => {
       data,
     });
   } catch (error) {
-    return handleError(
-      res,
-      error,
-      "getBarberAvailabilityStatus"
-    );
+    return handleError(res, error, "getBarberAvailabilityStatus");
   }
 };
 
-
 export const getAvailableDates = (req, res) =>
   run(res, "getAvailableDates", () =>
-    getAvailableDatesService(
-      req.params.barberId,
-      req.query
-    )
+    getAvailableDatesService(req.params.barberId, req.query),
   );
 
-
-
-  export const getAvailableSlots = (req, res) =>
+export const getAvailableSlots = (req, res) =>
   run(res, "getAvailableSlots", () =>
-    getAvailableSlotsService(
-      req.params.barberId,
-      req.query
-    )
+    getAvailableSlotsService(req.params.barberId, req.query),
   );
 
-  export const checkSlotAvailability = (req, res) =>
+export const checkSlotAvailability = (req, res) =>
   run(res, "checkSlotAvailability", () =>
-    checkSlotAvailabilityService(
-      req.params.barberId,
-      req.query
-    )
+    checkSlotAvailabilityService(req.params.barberId, req.query),
   );
-  
+
+export const getSuggestedSlots = (req, res) =>
+  run(res, "getSuggestedSlots", () =>
+    getSuggestedSlotsService(req.params.barberId, req.query),
+  );
