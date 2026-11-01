@@ -113,3 +113,78 @@ export const uploadProfilePhoto = async (userId, file) => {
     profilePhoto: user.profilePhoto,
   };
 };
+
+
+
+// ==========================================
+// API #13 - Delete Profile Photo
+// ==========================================
+
+export const deleteProfilePhoto = async (userId) => {
+  // Step 1: Validate User ID
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    const error = new Error("Invalid user ID");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Step 2: Find active user
+  const user = await userRepository.findActiveUserById(userId);
+
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Step 3: Check if photo exists
+  if (!user.profilePhoto || !user.profilePhotoPublicId) {
+    const error = new Error("No profile photo found to delete");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const publicId = user.profilePhotoPublicId;
+
+  // Step 4: Clear photo reference in MongoDB
+  const updatedUser =
+    await userRepository.clearCustomerProfilePhoto(
+      userId,
+      publicId
+    );
+
+  if (!updatedUser) {
+    const error = new Error(
+      "Profile photo was changed. Please try again"
+    );
+    error.statusCode = 409;
+    throw error;
+  }
+
+  // Step 5: Delete image from Cloudinary
+  try {
+    const result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: "image",
+    });
+
+    if (result.result !== "ok" && result.result !== "not found") {
+      console.error(
+        "Cloudinary photo deletion returned:",
+        result
+      );
+    }
+  } catch (error) {
+    // Database has already been updated.
+    // Log the Cloudinary failure for later cleanup.
+    console.error(
+      "Cloudinary profile photo cleanup failed:",
+      error
+    );
+  }
+
+  // Step 6: Return success
+  return {
+    profilePhoto: updatedUser.profilePhoto,
+    message: "Profile photo deleted successfully",
+  };
+};

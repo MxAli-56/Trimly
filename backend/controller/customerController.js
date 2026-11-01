@@ -58,9 +58,12 @@ import {
   getRecommendedSalons,
 } from "../services/customer/recommendationService.js";
 
-import { uploadProfilePhoto as uploadProfilePhotoService } from "../services/customer/profilePhotoService.js";
+import {
+  uploadProfilePhoto as uploadProfilePhotoService,
+  deleteProfilePhoto as deleteProfilePhotoService,
+} from "../services/customer/profilePhotoService.js";
 
-// Get authenticated user ID.
+// Get authenticated user ID
 const getAuthUserId = (req) => req.user?.id ?? req.user?._id ?? req.userId;
 
 const unauthorized = (res) =>
@@ -147,6 +150,21 @@ export const uploadMyProfilePhoto = async (req, res) => {
   } catch (error) {
     return handleError(res, error, "uploadMyProfilePhoto");
   }
+};
+
+
+// ==========================================
+// API #13 - Delete My Profile Photo
+// ==========================================
+
+export const deleteMyProfilePhoto = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(res, "deleteMyProfilePhoto", () =>
+    deleteProfilePhotoService(userId)
+  );
 };
 
 // ==================== SALON DISCOVERY ====================

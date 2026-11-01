@@ -73,3 +73,26 @@ export const findActiveUserById = async (userId) => {
     deletedAt: null,
   });
 };
+
+export const clearCustomerProfilePhoto = async (
+  userId,
+  publicId
+) => {
+  return await User.findOneAndUpdate(
+    {
+      _id: userId,
+      deletedAt: null,
+      profilePhotoPublicId: publicId,
+    },
+    {
+      $set: {
+        profilePhoto: null,
+        profilePhotoPublicId: null,
+      },
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
+  ).select("name email profilePhoto");
+};
