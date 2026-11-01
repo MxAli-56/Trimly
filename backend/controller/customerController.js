@@ -5,7 +5,9 @@ import {
 import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services/customer/salonOpeningHoursService.js";
 import { getServicePrice as getServicePriceService } from "../services/customer/servicePriceService.js";
 import { getAllServices as getAllServicesService } from "../services/customer/allServicesService.js";
-
+import {
+  getAvailableSlots as getAvailableSlotsService,
+} from "../services/customer/availableSlotsService.js";
 import {
   getBarberAvailabilityStatus as getBarberAvailabilityStatusService,
 } from "../services/customer/barberAvailabilityStatusService.js";
@@ -37,6 +39,10 @@ import {
 } from "../services/customer/barberService.js";
 
 import { getBarberAvailability } from "../services/customer/availabilityService.js";
+
+import {
+  getAvailableDates as getAvailableDatesService,
+} from "../services/customer/availableDatesService.js";
 
 import {
   getFavorites,
@@ -554,3 +560,22 @@ export const getBarberAvailabilityStatus = async (req, res) => {
     );
   }
 };
+
+
+export const getAvailableDates = (req, res) =>
+  run(res, "getAvailableDates", () =>
+    getAvailableDatesService(
+      req.params.barberId,
+      req.query
+    )
+  );
+
+
+
+  export const getAvailableSlots = (req, res) =>
+  run(res, "getAvailableSlots", () =>
+    getAvailableSlotsService(
+      req.params.barberId,
+      req.query
+    )
+  );
