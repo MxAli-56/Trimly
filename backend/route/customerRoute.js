@@ -38,6 +38,7 @@ import {
   deleteMyProfilePhoto,
   getAllServices,
   searchServices,
+  getServicesByCategory,
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -198,6 +199,11 @@ router.patch(
 
 router.get("/services", authenticate, getAllServices);
 router.get("/services/search", authenticate, searchServices);
+router.get(
+  "/services/category/:categoryId",
+  authenticate,
+  getServicesByCategory,
+);
 
 // ========================================
 // AI RECOMMENDATIONS

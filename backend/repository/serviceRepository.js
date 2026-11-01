@@ -1,5 +1,7 @@
 import Service from "../model/serviceModel.js";
 import Category from "../model/categoryModel.js";
+import mongoose from "mongoose";
+
 
 export const findServicesByBranchId = async (branchId) => {
   return await Service.find({
@@ -75,3 +77,33 @@ export const searchActiveServices = async ({
     .limit(limit)
     .lean();
 };
+
+
+
+// ==========================================
+// Get Services By Category
+// ==========================================
+
+export const findServicesByCategory = async ({
+  categoryId,
+  skip = 0,
+  limit = 10,
+}) => {
+  return await Service.find({
+    categoryId: new mongoose.Types.ObjectId(categoryId),
+    deletedAt: null,
+  })
+    .sort({ name: 1, _id: 1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+};
+
+// Count services in category
+export const countServicesByCategory = async (categoryId) => {
+  return await Service.countDocuments({
+    categoryId: new mongoose.Types.ObjectId(categoryId),
+    deletedAt: null,
+  });
+};
+
