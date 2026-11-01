@@ -93,3 +93,38 @@ export const findBookingByIdAndCustomer = async (
     .populate("services.serviceId", "name price durationMinutes")
     .lean();
 };
+
+
+export const findUpcomingBookingsByCustomer = async (
+  customerId,
+  today,
+  { page = 1, limit = 10 } = {}
+) => {
+  const filter = {
+    customerId,
+    deletedAt: null,
+    bookingDate: { $gte: today },
+  };
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate("branchId", "name address")
+      .populate("barberId", "name profilePhoto")
+      .populate("statusId", "name type")
+      .sort({ bookingDate: 1, startTime: 1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+
+    Booking.countDocuments(filter),
+  ]);
+
+  return {
+    bookings,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+};
+

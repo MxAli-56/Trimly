@@ -1,5 +1,7 @@
 import { createBooking } from "../services/booking/createBookingService.js";
 
+import { getUpcomingBookings } from "../services/booking/upcomingBookingService.js";
+
 import {
   getMyBookings,
   getBookingById,
@@ -105,3 +107,11 @@ export const rescheduleCustomerBooking = (req, res) => {
   );
 };
 
+export const getCustomerUpcomingBookings = (req, res) => {
+  const userId = getAuthUserId(req);
+  if (!userId) return unauthorized(res);
+
+  return run(res, "getCustomerUpcomingBookings", () =>
+    getUpcomingBookings(userId, req.query)
+  );
+};
