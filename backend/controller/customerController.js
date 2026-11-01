@@ -2,7 +2,9 @@ import {
   getCustomerProfile,
   updateCustomerProfile,
 } from "../services/customer/profileService.js";
-
+import {
+  getSalonOpeningHours as getSalonOpeningHoursService,
+} from "../services/customer/salonOpeningHoursService.js";
 import {
   getSalons,
   searchSalons as searchSalonsService,
@@ -402,4 +404,25 @@ export const getRecommendedSalonList = (req, res) => {
   return run(res, "getRecommendedSalonList", () =>
     getRecommendedSalons(userId, req.query),
   );
+};
+
+
+// ==========================================
+// Get Salon Opening Hours
+// ==========================================
+
+export const getSalonOpeningHours = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+
+    const data = await getSalonOpeningHoursService(branchId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Salon opening hours fetched successfully",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "getSalonOpeningHours");
+  }
 };

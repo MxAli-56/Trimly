@@ -34,6 +34,7 @@ import {
   getMyHairstyleRecommendations,
   getRecommendedSalonList,
   uploadMyProfilePhoto,
+  getSalonOpeningHours,
   deleteMyProfilePhoto,
 } from "../controller/customerController.js";
 
@@ -92,6 +93,11 @@ router.get(
   "/salons/:branchId/services/:serviceId",
   authenticate,
   getServiceDetails,
+);
+router.get(
+  "/salons/:branchId/opening-hours",
+  authenticate,
+  getSalonOpeningHours,
 );
 
 router.get("/salons/:branchId/barbers", authenticate, getSalonBarbers);

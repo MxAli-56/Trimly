@@ -1,4 +1,6 @@
 import Branch from "../model/branchModel.js";
+import mongoose from "mongoose";
+
 
 export const findAllActiveBranches = async (filters = {}) => {
   const query = {
@@ -97,4 +99,16 @@ export const findBranchesByArea = async (area) => {
       avgRating: -1,
       createdAt: -1,
     });
+};
+
+
+// API - Get Salon Opening Hours
+export const findSalonOpeningHoursById = async (branchId) => {
+  if (!mongoose.Types.ObjectId.isValid(branchId)) {
+    return null;
+  }
+
+  return await Branch.findById(branchId).select(
+    "name openingHours workingHours businessHours"
+  ).lean();
 };
