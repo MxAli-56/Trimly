@@ -2,9 +2,9 @@ import {
   getCustomerProfile,
   updateCustomerProfile,
 } from "../services/customer/profileService.js";
-import {
-  getSalonOpeningHours as getSalonOpeningHoursService,
-} from "../services/customer/salonOpeningHoursService.js";
+import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services/customer/salonOpeningHoursService.js";
+
+import { getSalonReviews as getSalonReviewsService } from "../services/customer/salonService.js";
 import {
   getSalons,
   searchSalons as searchSalonsService,
@@ -120,9 +120,7 @@ export const getMyProfile = (req, res) => {
 
   if (!userId) return unauthorized(res);
 
-  return run(res, "getMyProfile", () =>
-    getCustomerProfile(userId)
-  );
+  return run(res, "getMyProfile", () => getCustomerProfile(userId));
 };
 
 export const updateMyProfile = (req, res) => {
@@ -131,7 +129,7 @@ export const updateMyProfile = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "updateMyProfile", () =>
-    updateCustomerProfile(userId, req.body)
+    updateCustomerProfile(userId, req.body),
   );
 };
 // ==================== PROFILE PHOTO ====================
@@ -154,7 +152,6 @@ export const uploadMyProfilePhoto = async (req, res) => {
   }
 };
 
-
 // ==========================================
 // API #13 - Delete My Profile Photo
 // ==========================================
@@ -165,7 +162,7 @@ export const deleteMyProfilePhoto = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "deleteMyProfilePhoto", () =>
-    deleteProfilePhotoService(userId)
+    deleteProfilePhotoService(userId),
   );
 };
 
@@ -293,10 +290,26 @@ export const getCustomerReviews = (req, res) => {
   return run(res, "getCustomerReviews", () => getMyReviews(userId, req.query));
 };
 
-export const getSalonReviews = (req, res) =>
-  run(res, "getSalonReviews", () =>
-    getBranchReviews(req.params.branchId, req.query),
-  );
+// ==========================================
+// Get Salon Reviews
+// ==========================================
+
+export const getSalonReviews = async (req, res) => {
+  try {
+    const { branchId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    const data = await getSalonReviewsService(branchId, page, limit);
+
+    return res.status(200).json({
+      success: true,
+      message: "Salon reviews fetched successfully",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "getSalonReviews");
+  }
+};
 
 export const getBarberReviews = (req, res) =>
   run(res, "getBarberReviews", () =>
@@ -405,7 +418,6 @@ export const getRecommendedSalonList = (req, res) => {
     getRecommendedSalons(userId, req.query),
   );
 };
-
 
 // ==========================================
 // Get Salon Opening Hours

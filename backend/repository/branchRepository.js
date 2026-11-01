@@ -103,12 +103,19 @@ export const findBranchesByArea = async (area) => {
 
 
 // API - Get Salon Opening Hours
+
+// API - Get Salon Opening Hours
 export const findSalonOpeningHoursById = async (branchId) => {
   if (!mongoose.Types.ObjectId.isValid(branchId)) {
     return null;
   }
 
-  return await Branch.findById(branchId).select(
-    "name openingHours workingHours businessHours"
-  ).lean();
+  return await Branch.findOne({
+    _id: branchId,
+    deletedAt: null,
+  })
+    .select(
+      "name avgRating ratingCount openingHours workingHours businessHours"
+    )
+    .lean();
 };

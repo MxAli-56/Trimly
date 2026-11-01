@@ -12,3 +12,22 @@ export const findReviewsByBarberId = async (barberUserId) => {
     .populate("customerId", "name profilePhoto")
     .sort({ createdAt: -1 });
 };
+
+// Get reviews for a specific salon
+export const findReviewsBySalonId = async (
+  branchId,
+  skip,
+  limit
+) => {
+  return await Review.find({ branchId })
+    .populate("customerId", "name profilePhoto")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+};
+
+// Count salon reviews
+export const countReviewsBySalonId = async (branchId) => {
+  return await Review.countDocuments({ branchId });
+};

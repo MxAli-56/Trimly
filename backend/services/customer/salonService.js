@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
+import * as reviewRepository from "../../repository/reviewRepository.js";
 import * as branchRepository from "../../repository/branchRepository.js";
+
 
 export const getSalons = async (query = {}) => {
   const filters = {};
@@ -72,4 +74,74 @@ export const getSalonById = async (branchId) => {
   }
 
   return salon;
+};
+
+export const getSalonReviews = async (
+  branchId,
+  page = 1,
+  limit = 10
+) => {
+  // Step 1: Validate salon ID
+  if (!mongoose.Types.ObjectId.isValid(branchId)) {
+    const error = new Error("Invalid salon ID");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Step 2: Validate pagination
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+
+  if (
+    !Number.isInteger(pageNumber) ||
+    pageNumber < 1 ||
+    !Number.isInteger(limitNumber) ||
+    limitNumber < 1 ||
+    limitNumber > 100
+  ) {
+    const error = new Error(
+      "Page must be >= 1 and limit must be between 1 and 100"
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Step 3: Verify salon exists
+  const salon = await branchRepository.findSalonOpeningHoursById(
+    branchId
+  );
+
+  if (!salon) {
+    const error = new Error("Salon not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Step 4: Calculate pagination
+  const skip = (pageNumber - 1) * limitNumber;
+
+  // Step 5: Fetch reviews
+  const [reviews, totalReviews] = await Promise.all([
+    reviewRepository.findReviewsBySalonId(
+      branchId,
+      skip,
+      limitNumber
+    ),
+    reviewRepository.countReviewsBySalonId(branchId),
+  ]);
+
+  // Step 6: Return response
+  return {
+    salonId: salon._id,
+    salonName: salon.name,
+    avgRating: salon.avgRating ?? null,
+    ratingCount: salon.ratingCount ?? totalReviews,
+    reviews,
+    pagination: {
+      page: pageNumber,
+      limit: limitNumber,
+      totalReviews,
+      totalPages: Math.ceil(totalReviews / limitNumber),
+    },
+  };
 };
