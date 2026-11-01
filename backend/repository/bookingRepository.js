@@ -167,3 +167,20 @@ export const findPastBookingsByCustomer = async (
     totalPages: Math.ceil(total / limit),
   };
 };
+
+
+export const findBookingStatusById = async (
+  bookingId,
+  customerId
+) => {
+  return Booking.findOne({
+    _id: bookingId,
+    customerId,
+    deletedAt: null,
+  })
+    .select(
+      "appointmentCode statusId bookingDate startTime endTime"
+    )
+    .populate("statusId", "name type description")
+    .lean();
+};
