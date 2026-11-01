@@ -4,6 +4,10 @@ import {
 } from "../services/customer/profileService.js";
 import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services/customer/salonOpeningHoursService.js";
 
+import {
+  getAllServices as getAllServicesService,
+} from "../services/customer/allServicesService.js";
+
 import { getSalonReviews as getSalonReviewsService } from "../services/customer/salonService.js";
 import {
   getSalons,
@@ -436,5 +440,24 @@ export const getSalonOpeningHours = async (req, res) => {
     });
   } catch (error) {
     return handleError(res, error, "getSalonOpeningHours");
+  }
+};
+
+
+
+
+export const getAllServices = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+
+    const data = await getAllServicesService(page, limit);
+
+    return res.status(200).json({
+      success: true,
+      message: "Services fetched successfully",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "getAllServices");
   }
 };

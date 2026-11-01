@@ -27,3 +27,19 @@ export const findServiceById = async (branchId, serviceId) => {
     )
     .populate("categoryId", "name description");
 };
+
+export const findAllActiveServices = async ({ skip = 0, limit = 10 } = {}) => {
+  return await Service.find({
+    deletedAt: null,
+  })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+};
+
+export const countAllActiveServices = async () => {
+  return await Service.countDocuments({
+    deletedAt: null,
+  });
+};
