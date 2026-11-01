@@ -305,3 +305,43 @@ export const findBookingCancellationDetails = async (
     .lean();
 };
 
+
+
+import mongoose from "mongoose";
+
+// Existing imports ko preserve karo.
+
+export const findBookingForRefundStatus = async (
+  bookingId,
+  customerId
+) => {
+  return Booking.findOne({
+    _id: bookingId,
+    customerId,
+    deletedAt: null,
+  })
+    .select(
+      "appointmentCode statusId totalAmount depositAmount"
+    )
+    .populate("statusId", "name type")
+    .lean();
+};
+
+// Payment collection mein stored refund records
+export const findRefundPaymentsByBooking = async (
+  bookingId
+) => {
+  const Payment = mongoose.models.Payment;
+
+  if (!Payment) {
+    return null;
+  }
+
+  return Payment.find({
+    bookingId,
+    deletedAt: null,
+  })
+    .populate("statusId", "name type")
+    .sort({ createdAt: -1 })
+    .lean();
+};
