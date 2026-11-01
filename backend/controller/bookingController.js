@@ -6,6 +6,8 @@ import { getPastBookings } from "../services/booking/pastBookingService.js";
 
 import { getBookingStatus } from "../services/booking/bookingStatusService.js";
 
+import { calculateRefund } from "../services/booking/calculateRefundService.js";
+
 import { getAppointmentCode } from "../services/booking/appointmentCodeService.js";
 
 import { checkCancellationEligibility } from "../services/booking/cancellationEligibilityService.js";
@@ -163,5 +165,15 @@ export const getCancellationEligibility = (req, res) => {
       userId,
       req.params.bookingId
     )
+  );
+};
+
+export const getCalculatedRefund = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(res, "calculateRefund", () =>
+    calculateRefund(userId, req.params.bookingId)
   );
 };
