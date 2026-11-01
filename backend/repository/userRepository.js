@@ -39,20 +39,16 @@ export const updateUserById = async (userId, updateData) => {
   return await User.findByIdAndUpdate(userId, updateData, { new: true });
 };
 
-
 export const findCustomerProfileById = async (userId) => {
   return await User.findOne({
     _id: userId,
     deletedAt: null,
   }).select(
-    "name email phone profilePhoto roles isVerified favorites createdAt updatedAt"
+    "name email phone profilePhoto roles isVerified favorites createdAt updatedAt",
   );
 };
 
-export const updateCustomerProfileById = async (
-  userId,
-  updateData
-) => {
+export const updateCustomerProfileById = async (userId, updateData) => {
   return await User.findOneAndUpdate(
     {
       _id: userId,
@@ -65,8 +61,15 @@ export const updateCustomerProfileById = async (
       new: true,
       runValidators: true,
       context: "query",
-    }
+    },
   ).select(
-    "name email phone profilePhoto roles isVerified favorites createdAt updatedAt"
+    "name email phone profilePhoto roles isVerified favorites createdAt updatedAt",
   );
+};
+
+export const findActiveUserById = async (userId) => {
+  return await User.findOne({
+    _id: userId,
+    deletedAt: null,
+  });
 };
