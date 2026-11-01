@@ -5,7 +5,9 @@ import {
 import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services/customer/salonOpeningHoursService.js";
 import { getServicePrice as getServicePriceService } from "../services/customer/servicePriceService.js";
 import { getAllServices as getAllServicesService } from "../services/customer/allServicesService.js";
-
+import {
+  getBarberRating as getBarberRatingService,
+} from "../services/customer/barberRatingService.js";
 import { searchServices as searchServicesService } from "../services/customer/searchServicesService.js";
 import { getServicesByCategory as getServicesByCategoryService } from "../services/customer/servicesByCategoryService.js";
 import { getSalonReviews as getSalonReviewsService } from "../services/customer/salonService.js";
@@ -492,9 +494,6 @@ export const getServicesByCategory = async (req, res) => {
   }
 };
 
-
-
-
 export const getServicePrice = async (req, res) => {
   try {
     const { serviceId } = req.params;
@@ -508,5 +507,23 @@ export const getServicePrice = async (req, res) => {
     });
   } catch (error) {
     return handleError(res, error, "getServicePrice");
+  }
+};
+
+
+
+export const getBarberRating = async (req, res) => {
+  try {
+    const { barberId } = req.params;
+
+    const data = await getBarberRatingService(barberId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Barber rating fetched successfully",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "getBarberRating");
   }
 };

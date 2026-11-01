@@ -40,6 +40,7 @@ import {
   searchServices,
   getServicesByCategory,
   getServicePrice,
+  getBarberRating,
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -115,6 +116,8 @@ router.get("/salons/:branchId", authenticate, getSalonDetails);
 // ========================================
 
 router.get("/barbers/:barberId/schedule", getBarberScheduleDetails);
+
+router.get("/barbers/:barberId/rating", authenticate, getBarberRating);
 
 router.get("/barbers/:barberId/availability", getBarberAvailableSlots);
 
@@ -205,11 +208,7 @@ router.get(
   authenticate,
   getServicesByCategory,
 );
-router.get(
-  "/services/:serviceId/price",
-  authenticate,
-  getServicePrice
-);
+router.get("/services/:serviceId/price", authenticate, getServicePrice);
 // ========================================
 // AI RECOMMENDATIONS
 // ========================================
