@@ -184,3 +184,20 @@ export const findBookingStatusById = async (
     .populate("statusId", "name type description")
     .lean();
 };
+
+
+export const findBookingAppointmentCode = async (
+  bookingId,
+  customerId
+) => {
+  return Booking.findOne({
+    _id: bookingId,
+    customerId,
+    deletedAt: null,
+  })
+    .select(
+      "appointmentCode bookingDate startTime endTime statusId"
+    )
+    .populate("statusId", "name type")
+    .lean();
+};

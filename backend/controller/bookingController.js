@@ -6,6 +6,8 @@ import { getPastBookings } from "../services/booking/pastBookingService.js";
 
 import { getBookingStatus } from "../services/booking/bookingStatusService.js";
 
+import { getAppointmentCode } from "../services/booking/appointmentCodeService.js";
+
 import {
   getMyBookings,
   getBookingById,
@@ -135,5 +137,15 @@ export const getCustomerBookingStatus = (req, res) => {
 
   return run(res, "getCustomerBookingStatus", () =>
     getBookingStatus(userId, req.params.bookingId)
+  );
+};
+
+export const getCustomerAppointmentCode = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(res, "getCustomerAppointmentCode", () =>
+    getAppointmentCode(userId, req.params.bookingId)
   );
 };

@@ -9,6 +9,7 @@ import {
   getCustomerUpcomingBookings,
   getCustomerPastBookings,
   getCustomerBookingStatus,
+  getCustomerAppointmentCode
 } from "../controller/bookingController.js";
 
 import authenticate from "../middleware/Auth.js";
@@ -25,6 +26,8 @@ router.get("/past", getCustomerPastBookings);
 
 router.get("/:bookingId", getCustomerBookingById);
 router.get("/:bookingId/status", getCustomerBookingStatus);
+router.get("/:bookingId/appointment-code", getCustomerAppointmentCode);
+
 router.patch("/:bookingId/cancel", cancelCustomerBooking);
 router.patch("/:bookingId/reschedule", rescheduleCustomerBooking);
 
