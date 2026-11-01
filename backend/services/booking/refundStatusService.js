@@ -61,12 +61,12 @@ export const getRefundStatus = async (
     bookingId
   );
 
-  if (payments === null) {
-    throw createError(
-      "Payment model is not registered",
-      500
-    );
-  }
+//   if (payments === null) {
+//     throw createError(
+//       "Payment model is not registered",
+//       500
+//     );
+//   }
 
   // Only records with an explicit REFUND status
   const refundPayment = payments.find(

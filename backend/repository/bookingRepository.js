@@ -1,7 +1,7 @@
 
 import Booking from "../model/bookingModel.js";
 import Status from "../model/statusModel.js";
-
+import Payment from "../model/paymentModel.js";
 // Find initial booking status
 export const findBookingStatus = async (name, type) => {
   return Status.findOne({
@@ -328,15 +328,7 @@ export const findBookingForRefundStatus = async (
 };
 
 // Payment collection mein stored refund records
-export const findRefundPaymentsByBooking = async (
-  bookingId
-) => {
-  const Payment = mongoose.models.Payment;
-
-  if (!Payment) {
-    return null;
-  }
-
+export const findRefundPaymentsByBooking = async (bookingId) => {
   return Payment.find({
     bookingId,
     deletedAt: null,
