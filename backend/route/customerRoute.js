@@ -41,6 +41,7 @@ import {
   getServicesByCategory,
   getServicePrice,
   getBarberRating,
+  getBarberAvailabilityStatus,
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -120,6 +121,12 @@ router.get("/barbers/:barberId/schedule", getBarberScheduleDetails);
 router.get("/barbers/:barberId/rating", authenticate, getBarberRating);
 
 router.get("/barbers/:barberId/availability", getBarberAvailableSlots);
+
+router.get(
+  "/barbers/:barberId/availability-status",
+  authenticate,
+  getBarberAvailabilityStatus,
+);
 
 router.get("/barbers/:barberId/reviews", authenticate, getBarberReviews);
 

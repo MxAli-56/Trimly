@@ -5,6 +5,10 @@ import {
 import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services/customer/salonOpeningHoursService.js";
 import { getServicePrice as getServicePriceService } from "../services/customer/servicePriceService.js";
 import { getAllServices as getAllServicesService } from "../services/customer/allServicesService.js";
+
+import {
+  getBarberAvailabilityStatus as getBarberAvailabilityStatusService,
+} from "../services/customer/barberAvailabilityStatusService.js";
 import {
   getBarberRating as getBarberRatingService,
 } from "../services/customer/barberRatingService.js";
@@ -525,5 +529,26 @@ export const getBarberRating = async (req, res) => {
     });
   } catch (error) {
     return handleError(res, error, "getBarberRating");
+  }
+};
+
+export const getBarberAvailabilityStatus = async (req, res) => {
+  try {
+    const { barberId } = req.params;
+
+    const data =
+      await getBarberAvailabilityStatusService(barberId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Barber availability status fetched successfully",
+      data,
+    });
+  } catch (error) {
+    return handleError(
+      res,
+      error,
+      "getBarberAvailabilityStatus"
+    );
   }
 };
