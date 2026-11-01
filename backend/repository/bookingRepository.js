@@ -201,3 +201,43 @@ export const findBookingAppointmentCode = async (
     .populate("statusId", "name type")
     .lean();
 };
+
+
+export const findBookingForCancellation = async (
+  bookingId,
+  customerId
+) => {
+  return Booking.findOne({
+    _id: bookingId,
+    customerId,
+    deletedAt: null,
+  })
+    .populate("statusId", "name type")
+    .lean();
+};
+
+export const updateBookingCancellation = async (
+  bookingId,
+  customerId,
+  expectedStatusId,
+  cancelledStatusId,
+  reason
+) => {
+  return Booking.findOneAndUpdate(
+    {
+      _id: bookingId,
+      customerId,
+      statusId: expectedStatusId,
+      deletedAt: null,
+    },
+    {
+      $set: {
+        statusId: cancelledStatusId,
+        cancelReason: reason,
+      },
+    },
+    { new: true, runValidators: true }
+  )
+    .populate("statusId", "name type")
+    .lean();
+};
