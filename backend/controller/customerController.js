@@ -14,6 +14,8 @@ import {
 } from "../services/customer/barberRatingService.js";
 import { searchServices as searchServicesService } from "../services/customer/searchServicesService.js";
 import { getServicesByCategory as getServicesByCategoryService } from "../services/customer/servicesByCategoryService.js";
+
+
 import { getSalonReviews as getSalonReviewsService } from "../services/customer/salonService.js";
 import {
   getSalons,

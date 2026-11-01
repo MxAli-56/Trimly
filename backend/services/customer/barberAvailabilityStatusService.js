@@ -122,3 +122,41 @@ export const getBarberAvailabilityStatus = async (barberId) => {
     message: "Barber is currently available",
   };
 };
+
+
+export const getBarberAvailability = async (barberId) => {
+  // Step 1: Validate barber ID
+  if (
+    !barberId ||
+    !mongoose.Types.ObjectId.isValid(barberId)
+  ) {
+    const error = new Error("Invalid barber ID");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Step 2: Check barber profile
+  const barber =
+    await availabilityRepository.findBarberProfileForAvailability(
+      barberId
+    );
+
+  if (!barber) {
+    const error = new Error("Barber not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Step 3: Get schedules
+  const schedules =
+    await availabilityRepository.findBarberSchedules(barberId);
+
+  // Step 4: Return barber availability
+  return {
+    barberId: barber._id,
+    branchId: barber.branchId ?? null,
+    isActive: barber.isActive ?? true,
+    schedules,
+    totalSchedules: schedules.length,
+  };
+};
