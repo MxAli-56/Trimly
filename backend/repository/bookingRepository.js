@@ -128,3 +128,42 @@ export const findUpcomingBookingsByCustomer = async (
   };
 };
 
+export const findPastBookingsByCustomer = async (
+  customerId,
+  today,
+  currentTime,
+  { page = 1, limit = 10 } = {}
+) => {
+  const filter = {
+    customerId,
+    deletedAt: null,
+    $or: [
+      { bookingDate: { $lt: today } },
+      {
+        bookingDate: today,
+        endTime: { $lte: currentTime },
+      },
+    ],
+  };
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate("branchId", "name address")
+      .populate("barberId", "name profilePhoto")
+      .populate("statusId", "name type")
+      .sort({ bookingDate: -1, startTime: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+
+    Booking.countDocuments(filter),
+  ]);
+
+  return {
+    bookings,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+};

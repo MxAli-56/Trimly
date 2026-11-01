@@ -7,6 +7,7 @@ import {
   cancelCustomerBooking,
   rescheduleCustomerBooking,
   getCustomerUpcomingBookings,
+  getCustomerPastBookings,
 } from "../controller/bookingController.js";
 
 import authenticate from "../middleware/Auth.js";
@@ -16,8 +17,11 @@ const router = express.Router();
 router.use(authenticate);
 
 router.post("/", createCustomerBooking);
+
 router.get("/", getCustomerBookings);
 router.get("/upcoming", getCustomerUpcomingBookings);
+router.get("/past", getCustomerPastBookings);
+
 router.get("/:bookingId", getCustomerBookingById);
 
 router.patch("/:bookingId/cancel", cancelCustomerBooking);
