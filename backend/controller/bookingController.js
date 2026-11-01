@@ -8,6 +8,8 @@ import { getBookingStatus } from "../services/booking/bookingStatusService.js";
 
 import { getAppointmentCode } from "../services/booking/appointmentCodeService.js";
 
+import { checkCancellationEligibility } from "../services/booking/cancellationEligibilityService.js";
+
 import {
   getMyBookings,
   getBookingById,
@@ -151,3 +153,15 @@ export const getCustomerAppointmentCode = (req, res) => {
 };
 
 
+export const getCancellationEligibility = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(res, "checkCancellationEligibility", () =>
+    checkCancellationEligibility(
+      userId,
+      req.params.bookingId
+    )
+  );
+};

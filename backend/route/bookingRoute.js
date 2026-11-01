@@ -9,7 +9,9 @@ import {
   getCustomerUpcomingBookings,
   getCustomerPastBookings,
   getCustomerBookingStatus,
-  getCustomerAppointmentCode
+  getCustomerAppointmentCode,
+  getCancellationEligibility,
+  
 } from "../controller/bookingController.js";
 
 import authenticate from "../middleware/Auth.js";
@@ -30,5 +32,7 @@ router.get("/:bookingId/appointment-code", getCustomerAppointmentCode);
 
 router.patch("/:bookingId/cancel", cancelCustomerBooking);
 router.patch("/:bookingId/reschedule", rescheduleCustomerBooking);
+
+router.get("/:bookingId/cancellation-eligibility", getCancellationEligibility);
 
 export default router;
