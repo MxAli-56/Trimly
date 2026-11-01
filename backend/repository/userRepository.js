@@ -40,12 +40,33 @@ export const updateUserById = async (userId, updateData) => {
 };
 
 
-
 export const findCustomerProfileById = async (userId) => {
   return await User.findOne({
     _id: userId,
     deletedAt: null,
   }).select(
-    "-password -refreshToken -otp -otpExpiry"
+    "name email phone profilePhoto roles isVerified favorites createdAt updatedAt"
+  );
+};
+
+export const updateCustomerProfileById = async (
+  userId,
+  updateData
+) => {
+  return await User.findOneAndUpdate(
+    {
+      _id: userId,
+      deletedAt: null,
+    },
+    {
+      $set: updateData,
+    },
+    {
+      new: true,
+      runValidators: true,
+      context: "query",
+    }
+  ).select(
+    "name email phone profilePhoto roles isVerified favorites createdAt updatedAt"
   );
 };

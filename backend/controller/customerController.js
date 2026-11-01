@@ -112,20 +112,23 @@ const run = async (res, feature, serviceCall, statusCode = 200) => {
 
 export const getMyProfile = (req, res) => {
   const userId = getAuthUserId(req);
+
   if (!userId) return unauthorized(res);
 
-  return run(res, "getMyProfile", () => getCustomerProfile(userId));
+  return run(res, "getMyProfile", () =>
+    getCustomerProfile(userId)
+  );
 };
 
 export const updateMyProfile = (req, res) => {
   const userId = getAuthUserId(req);
+
   if (!userId) return unauthorized(res);
 
   return run(res, "updateMyProfile", () =>
-    updateCustomerProfile(userId, req.body),
+    updateCustomerProfile(userId, req.body)
   );
 };
-
 // ==================== PROFILE PHOTO ====================
 
 export const uploadMyProfilePhoto = async (req, res) => {

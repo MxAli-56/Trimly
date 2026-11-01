@@ -75,6 +75,8 @@ router.get("/barbers/:barberId/reviews", authenticate, getBarberReviews);
 router.get("/me", authenticate, getMyProfile);
 
 router.patch("/me", authenticate, updateMyProfile);
+router.get("/me/profile", authenticate, getMyProfile);
+router.patch("/me/profile", authenticate, updateMyProfile);
 
 router.patch(
   "/me/profile-photo",
