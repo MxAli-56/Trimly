@@ -104,3 +104,4 @@ export const rescheduleCustomerBooking = (req, res) => {
     rescheduleBooking(userId, req.params.bookingId, req.body)
   );
 };
+

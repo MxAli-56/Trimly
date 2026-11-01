@@ -36,17 +36,12 @@ export const findOverlappingBookings = async ({
   }).lean();
 };
 
-
-
-
 export const findBookingStatuses = async () => {
   return Status.find({
     type: "BOOKING",
     deletedAt: null,
   }).lean();
 };
-
-
 
 export const findBookingsByCustomer = async (
   customerId,
@@ -79,4 +74,22 @@ export const findBookingsByCustomer = async (
     limit,
     totalPages: Math.ceil(total / limit),
   };
+};
+
+
+
+export const findBookingByIdAndCustomer = async (
+  bookingId,
+  customerId
+) => {
+  return Booking.findOne({
+    _id: bookingId,
+    customerId,
+    deletedAt: null,
+  })
+    .populate("branchId", "name address")
+    .populate("barberId", "name profilePhoto")
+    .populate("statusId", "name type")
+    .populate("services.serviceId", "name price durationMinutes")
+    .lean();
 };

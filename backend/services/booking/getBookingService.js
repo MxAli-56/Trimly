@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { findBookingsByCustomer } from "../../repository/bookingRepository.js";
-
+import { findBookingByIdAndCustomer } from "../../repository/bookingRepository.js";
 
 
 export const getMyBookings = async (userId, query = {}) => {
@@ -33,10 +33,31 @@ export const getMyBookings = async (userId, query = {}) => {
   });
 };
 
-
 export const getBookingById = async (userId, bookingId) => {
-  // TODO: Find booking and verify customer ownership.
-  throw new Error("NOT_IMPLEMENTED");
+  if (!mongoose.isValidObjectId(userId)) {
+    const error = new Error("Invalid customer ID");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!mongoose.isValidObjectId(bookingId)) {
+    const error = new Error("Invalid booking ID");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const booking = await findBookingByIdAndCustomer(
+    bookingId,
+    userId
+  );
+
+  if (!booking) {
+    const error = new Error("Booking not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return booking;
 };
 
 
