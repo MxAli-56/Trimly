@@ -284,3 +284,24 @@ export const updateBookingReschedule = async (
     .lean();
 };
 
+
+export const findBookingCancellationDetails = async (
+  bookingId,
+  customerId
+) => {
+  return Booking.findOne({
+    _id: bookingId,
+    customerId,
+    deletedAt: null,
+  })
+    .select(
+      "appointmentCode bookingDate startTime endTime " +
+      "statusId cancelReason totalAmount depositAmount " +
+      "branchId barberId updatedAt"
+    )
+    .populate("statusId", "name type description")
+    .populate("branchId", "name address")
+    .populate("barberId", "name profilePhoto")
+    .lean();
+};
+

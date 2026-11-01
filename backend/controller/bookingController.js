@@ -8,6 +8,8 @@ import { getBookingStatus } from "../services/booking/bookingStatusService.js";
 
 import { calculateRefund } from "../services/booking/calculateRefundService.js";
 
+import { getCancellationDetails } from "../services/booking/cancellationDetailsService.js";
+
 import { getAppointmentCode } from "../services/booking/appointmentCodeService.js";
 
 import { checkCancellationEligibility } from "../services/booking/cancellationEligibilityService.js";
@@ -175,5 +177,16 @@ export const getCalculatedRefund = (req, res) => {
 
   return run(res, "calculateRefund", () =>
     calculateRefund(userId, req.params.bookingId)
+  );
+};
+
+
+export const getCustomerCancellationDetails = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(res, "getCancellationDetails", () =>
+    getCancellationDetails(userId, req.params.bookingId)
   );
 };
