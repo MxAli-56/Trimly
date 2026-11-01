@@ -39,6 +39,7 @@ import {
   getAllServices,
   searchServices,
   getServicesByCategory,
+  getServicePrice,
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -204,7 +205,11 @@ router.get(
   authenticate,
   getServicesByCategory,
 );
-
+router.get(
+  "/services/:serviceId/price",
+  authenticate,
+  getServicePrice
+);
 // ========================================
 // AI RECOMMENDATIONS
 // ========================================

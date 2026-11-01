@@ -107,3 +107,21 @@ export const countServicesByCategory = async (categoryId) => {
   });
 };
 
+
+
+
+
+// ==========================================
+// API - Get Service Price
+// ==========================================
+
+export const findServicePriceById = async (serviceId) => {
+  return await Service.findOne({
+    _id: serviceId,
+    deletedAt: null,
+  })
+    .select(
+      "name price duration durationMinutes branchId categoryId"
+    )
+    .lean();
+};

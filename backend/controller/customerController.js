@@ -3,7 +3,7 @@ import {
   updateCustomerProfile,
 } from "../services/customer/profileService.js";
 import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services/customer/salonOpeningHoursService.js";
-
+import { getServicePrice as getServicePriceService } from "../services/customer/servicePriceService.js";
 import { getAllServices as getAllServicesService } from "../services/customer/allServicesService.js";
 
 import { searchServices as searchServicesService } from "../services/customer/searchServicesService.js";
@@ -475,17 +475,12 @@ export const searchServices = async (req, res) => {
   }
 };
 
-
 export const getServicesByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
-    const data = await getServicesByCategoryService(
-      categoryId,
-      page,
-      limit
-    );
+    const data = await getServicesByCategoryService(categoryId, page, limit);
 
     return res.status(200).json({
       success: true,
@@ -493,10 +488,25 @@ export const getServicesByCategory = async (req, res) => {
       data,
     });
   } catch (error) {
-    return handleError(
-      res,
-      error,
-      "getServicesByCategory"
-    );
+    return handleError(res, error, "getServicesByCategory");
+  }
+};
+
+
+
+
+export const getServicePrice = async (req, res) => {
+  try {
+    const { serviceId } = req.params;
+
+    const data = await getServicePriceService(serviceId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Service price fetched successfully",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "getServicePrice");
   }
 };
