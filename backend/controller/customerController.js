@@ -4,9 +4,9 @@ import {
 } from "../services/customer/profileService.js";
 import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services/customer/salonOpeningHoursService.js";
 
-import {
-  getAllServices as getAllServicesService,
-} from "../services/customer/allServicesService.js";
+import { getAllServices as getAllServicesService } from "../services/customer/allServicesService.js";
+
+import { searchServices as searchServicesService } from "../services/customer/searchServicesService.js";
 
 import { getSalonReviews as getSalonReviewsService } from "../services/customer/salonService.js";
 import {
@@ -443,9 +443,6 @@ export const getSalonOpeningHours = async (req, res) => {
   }
 };
 
-
-
-
 export const getAllServices = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -459,5 +456,28 @@ export const getAllServices = async (req, res) => {
     });
   } catch (error) {
     return handleError(res, error, "getAllServices");
+  }
+};
+
+
+
+
+export const searchServices = async (req, res) => {
+  try {
+    const { q, page = 1, limit = 10 } = req.query;
+
+    const data = await searchServicesService(
+      q,
+      page,
+      limit
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Services searched successfully",
+      data,
+    });
+  } catch (error) {
+    return handleError(res, error, "searchServices");
   }
 };

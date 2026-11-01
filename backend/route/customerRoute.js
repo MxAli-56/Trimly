@@ -37,6 +37,7 @@ import {
   getSalonOpeningHours,
   deleteMyProfilePhoto,
   getAllServices,
+  searchServices,
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -196,6 +197,7 @@ router.patch(
 // ========================================
 
 router.get("/services", authenticate, getAllServices);
+router.get("/services/search", authenticate, searchServices);
 
 // ========================================
 // AI RECOMMENDATIONS

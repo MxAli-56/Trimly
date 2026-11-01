@@ -43,3 +43,35 @@ export const countAllActiveServices = async () => {
     deletedAt: null,
   });
 };
+
+export const countSearchActiveServices = async (searchText) => {
+  const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  return await Service.countDocuments({
+    deletedAt: null,
+    name: {
+      $regex: escapedSearch,
+      $options: "i",
+    },
+  });
+};
+
+export const searchActiveServices = async ({
+  searchText,
+  skip = 0,
+  limit = 10,
+}) => {
+  const escapedSearch = searchText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  return await Service.find({
+    deletedAt: null,
+    name: {
+      $regex: escapedSearch,
+      $options: "i",
+    },
+  })
+    .sort({ name: 1, _id: 1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+};
