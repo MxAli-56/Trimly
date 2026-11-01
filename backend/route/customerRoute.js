@@ -44,6 +44,7 @@ import {
   getBarberAvailabilityStatus,
   getAvailableDates,
   getAvailableSlots,
+  checkSlotAvailability,
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -140,6 +141,11 @@ router.get(
   "/barbers/:barberId/available-slots",
   authenticate,
   getAvailableSlots
+);
+router.get(
+  "/barbers/:barberId/check-slot",
+  authenticate,
+  checkSlotAvailability
 );
 
 router.get("/barbers/:barberId/reviews", authenticate, getBarberReviews);

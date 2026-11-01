@@ -8,6 +8,10 @@ import { getAllServices as getAllServicesService } from "../services/customer/al
 import {
   getAvailableSlots as getAvailableSlotsService,
 } from "../services/customer/availableSlotsService.js";
+
+import {
+  checkSlotAvailability as checkSlotAvailabilityService,
+} from "../services/customer/checkSlotAvailabilityService.js";
 import {
   getBarberAvailabilityStatus as getBarberAvailabilityStatusService,
 } from "../services/customer/barberAvailabilityStatusService.js";
@@ -579,3 +583,12 @@ export const getAvailableDates = (req, res) =>
       req.query
     )
   );
+
+  export const checkSlotAvailability = (req, res) =>
+  run(res, "checkSlotAvailability", () =>
+    checkSlotAvailabilityService(
+      req.params.barberId,
+      req.query
+    )
+  );
+  
