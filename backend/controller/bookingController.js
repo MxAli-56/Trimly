@@ -149,3 +149,5 @@ export const getCustomerAppointmentCode = (req, res) => {
     getAppointmentCode(userId, req.params.bookingId)
   );
 };
+
+
