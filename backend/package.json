@@ -27,6 +27,7 @@
     "nodemailer": "^10.0.16"
   },
   "devDependencies": {
+    "mongoose-to-erd": "^2.0.0",
     "nodemon": "^3.1.14"
   }
 }

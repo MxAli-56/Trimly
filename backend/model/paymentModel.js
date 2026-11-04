@@ -44,7 +44,6 @@ const paymentSchema = new mongoose.Schema(
 );
 
 paymentSchema.index({ bookingId: 1 });
-paymentSchema.index({ transactionId: 1 });
 
 const Payment = mongoose.model("Payment", paymentSchema);
 
