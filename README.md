@@ -77,5 +77,4 @@ npm run dev
 The API will run on http://localhost:5000. Check the health endpoint at /api/v1/health.
 
 🎨 Figma Prototype
-
-
+https://www.figma.com/design/wH3R31ladWCAnqU3LsSp8C/Trimly-UIs?node-id=0-1&p=f&t=nZ7NFywZCkeM2AI8-0
