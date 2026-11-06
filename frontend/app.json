@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Trimly",
+    "slug": "trimly",
+    "android": {
+      "package": "com.trimly.app",
+      "googleServicesFile": "./google-services.json"
+    },
+    
+    "plugins": [
+  "expo-secure-store",
+  "@react-native-firebase/app",
+  "@react-native-firebase/auth",
+  "./plugins/withFirebaseBom"
+],
+    "extra": {
+      "eas": {
+        "projectId": "e4cff984-128c-4193-afb0-8040626849b4"
+      }
+    }
+  }
+}

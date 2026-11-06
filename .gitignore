@@ -1,3 +1,4 @@
+
 # Environment Variables & Secrets
 .env
 .env.local
@@ -5,12 +6,16 @@
 *.env
 
 # Frontend
-frontend/node_modules
+frontend/node_modules/
 frontend/.env
 
 # Backend
 node_modules/
 backend/node_modules/
+
+# Firebase & Backend Secrets
+backend/config/serviceAccountKey.json
+frontend/google-services.json
 
 # Logs & Debugging
 npm-debug.log*
@@ -25,15 +30,25 @@ Thumbs.db
 .vscode/
 .idea/
 
-# File Uploads (Local storage temporary files)
+# File Uploads
 uploads/
 backend/uploads/
 
+# Project Documentation
 Trimly.md
 LLM.md
 ParallelGithubWork.md
 ProjectUnderstanding.md
 
-backend/config/serviceAccountKey.json
+# Generated ERD diagrams
 backend/scripts/minimal-erd-2026.svg
 backend/scripts/full-erd-2026.svg
+
+# Expo local files
+frontend/.expo/
+
+# Android local signing key
+frontend/android/app/debug.keystore
+# Firebase configuration
+frontend/google-services.json
+frontend/android/app/google-services.json
