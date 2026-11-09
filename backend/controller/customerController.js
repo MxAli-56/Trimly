@@ -181,16 +181,49 @@ export const deleteMyProfilePhoto = (req, res) => {
 
 // ==================== SALON DISCOVERY ====================
 
+
+const salonListResponse = async (res, feature, serviceCall) => {
+  try {
+    const salons = await serviceCall();
+
+    return res.status(200).json({
+      success: true,
+      message:
+        salons.length === 0
+          ? "No salons found"
+          : "Salons fetched successfully",
+      data: salons,
+    });
+  } catch (error) {
+    return handleError(res, error, feature);
+  }
+};
+
 export const getAllSalons = (req, res) =>
-  run(res, "getAllSalons", () => getSalons(req.query));
+  salonListResponse(res, "getAllSalons", () =>
+    getSalons(req.query)
+  );
 
 export const searchSalons = (req, res) =>
-  run(res, "searchSalons", () => searchSalonsService(req.query.q));
+  salonListResponse(res, "searchSalons", () =>
+    searchSalonsService(req.query.q)
+  );
 
 export const filterSalonsByArea = (req, res) =>
-  run(res, "filterSalonsByArea", () =>
-    filterSalonsByAreaService(req.query.area),
+  salonListResponse(res, "filterSalonsByArea", () =>
+    filterSalonsByAreaService(req.query.area)
   );
+
+// export const getAllSalons = (req, res) =>
+//   run(res, "getAllSalons", () => getSalons(req.query));
+
+// export const searchSalons = (req, res) =>
+//   run(res, "searchSalons", () => searchSalonsService(req.query.q));
+
+// export const filterSalonsByArea = (req, res) =>
+//   run(res, "filterSalonsByArea", () =>
+//     filterSalonsByAreaService(req.query.area),
+//   );
 
 export const getSalonDetails = (req, res) =>
   run(res, "getSalonDetails", () => getSalonById(req.params.branchId));
