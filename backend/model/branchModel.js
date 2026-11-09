@@ -28,6 +28,33 @@ const branchSchema = new mongoose.Schema(
       default: "Karachi",
       trim: true,
     },
+
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number],
+        default: undefined,
+        validate: {
+          validator: function (value) {
+            return (
+              value === undefined ||
+              (value.length === 2 &&
+                value.every(Number.isFinite) &&
+                value[0] >= -180 &&
+                value[0] <= 180 &&
+                value[1] >= -90 &&
+                value[1] <= 90)
+            );
+          },
+          message: "Coordinates must be [longitude, latitude]",
+        },
+      },
+    },
+
     isOpen: {
       type: Boolean,
       default: true,
@@ -54,6 +81,7 @@ const branchSchema = new mongoose.Schema(
 
 branchSchema.index({ ownerId: 1 });
 branchSchema.index({ area: 1, city: 1 });
+branchSchema.index({ location: "2dsphere" });
 
 const Branch = mongoose.model("Branch", branchSchema);
 
