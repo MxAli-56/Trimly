@@ -46,6 +46,7 @@ import {
   getAvailableSlots,
   checkSlotAvailability,
   getSuggestedSlots,
+  getNearbySalons,
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -90,6 +91,7 @@ router.delete("/me/profile/photo", authenticate, deleteMyProfilePhoto);
 // ========================================
 
 router.get("/salons", authenticate, getAllSalons);
+router.get("/salons/nearby", getNearbySalons);
 
 router.get("/salons/search", authenticate, searchSalons);
 

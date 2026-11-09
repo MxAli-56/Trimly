@@ -7,6 +7,8 @@ import { getServicePrice as getServicePriceService } from "../services/customer/
 import { getAllServices as getAllServicesService } from "../services/customer/allServicesService.js";
 import { getSuggestedSlots as getSuggestedSlotsService } from "../services/customer/suggestedSlotsService.js";
 
+import { getNearbySalons as getNearbySalonsService } from "../services/customer/nearbySalonService.js";
+
 import { getAvailableSlots as getAvailableSlotsService } from "../services/customer/availableSlotsService.js";
 
 import { checkSlotAvailability as checkSlotAvailabilityService } from "../services/customer/checkSlotAvailabilityService.js";
@@ -214,6 +216,10 @@ export const filterSalonsByArea = (req, res) =>
     filterSalonsByAreaService(req.query.area)
   );
 
+  export const getNearbySalons = (req, res) =>
+  salonListResponse(res, "getNearbySalons", () =>
+    getNearbySalonsService(req.query)
+  );
 // export const getAllSalons = (req, res) =>
 //   run(res, "getAllSalons", () => getSalons(req.query));
 

@@ -119,3 +119,24 @@ export const findSalonOpeningHoursById = async (branchId) => {
     )
     .lean();
 };
+
+
+
+export const findNearbyBranches = async ({
+  longitude,
+  latitude,
+  radiusMeters,
+}) => {
+  return Branch.find({
+    deletedAt: null,
+    location: {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: [longitude, latitude],
+        },
+        $maxDistance: radiusMeters,
+      },
+    },
+  }).lean();
+};
