@@ -6,7 +6,7 @@ import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services
 import { getServicePrice as getServicePriceService } from "../services/customer/servicePriceService.js";
 import { getAllServices as getAllServicesService } from "../services/customer/allServicesService.js";
 import { getSuggestedSlots as getSuggestedSlotsService } from "../services/customer/suggestedSlotsService.js";
-
+import { addFavouriteSalon as addFavouriteSalonService } from "../services/customer/favouriteSalonService.js";
 import { getNearbySalons as getNearbySalonsService } from "../services/customer/nearbySalonService.js";
 
 import { getAvailableSlots as getAvailableSlotsService } from "../services/customer/availableSlotsService.js";
@@ -82,6 +82,9 @@ import {
 
 // Get authenticated user ID
 const getAuthUserId = (req) => req.user?.id ?? req.user?._id ?? req.userId;
+// const getAuthUserId = (req) => {
+//   return req.user?.id || req.user?._id || req.userId;
+// };
 
 const unauthorized = (res) =>
   res.status(401).json({
@@ -607,3 +610,21 @@ export const getSuggestedSlots = (req, res) =>
   run(res, "getSuggestedSlots", () =>
     getSuggestedSlotsService(req.params.barberId, req.query),
   );
+
+
+export const addCustomerFavouriteSalon = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(
+    res,
+    "addFavouriteSalon",
+    () =>
+      addFavouriteSalonService(
+        userId,
+        req.params.salonId
+      ),
+    201
+  );
+};

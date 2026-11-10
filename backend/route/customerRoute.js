@@ -47,6 +47,7 @@ import {
   checkSlotAvailability,
   getSuggestedSlots,
   getNearbySalons,
+  addCustomerFavouriteSalon,
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -101,6 +102,8 @@ router.get("/salons/:branchId/categories", getSalonCategories);
 
 router.get("/salons/:branchId/services", authenticate, getSalonServices);
 
+router.post("/favorites/salons/:salonId", authenticate, addCustomerFavouriteSalon);
+
 router.get(
   "/salons/:branchId/services/:serviceId",
   authenticate,
@@ -143,18 +146,18 @@ router.get(
 router.get(
   "/barbers/:barberId/available-slots",
   authenticate,
-  getAvailableSlots
+  getAvailableSlots,
 );
 router.get(
   "/barbers/:barberId/check-slot",
   authenticate,
-  checkSlotAvailability
+  checkSlotAvailability,
 );
 
 router.get(
   "/barbers/:barberId/suggested-slots",
   authenticate,
-  getSuggestedSlots
+  getSuggestedSlots,
 );
 
 router.get("/barbers/:barberId/reviews", authenticate, getBarberReviews);
