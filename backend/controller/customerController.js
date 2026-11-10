@@ -6,7 +6,10 @@ import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services
 import { getServicePrice as getServicePriceService } from "../services/customer/servicePriceService.js";
 import { getAllServices as getAllServicesService } from "../services/customer/allServicesService.js";
 import { getSuggestedSlots as getSuggestedSlotsService } from "../services/customer/suggestedSlotsService.js";
-import { addFavouriteSalon as addFavouriteSalonService } from "../services/customer/favouriteSalonService.js";
+import {
+  addFavouriteSalon as addFavouriteSalonService,
+  removeFavouriteSalon as removeFavouriteSalonService,
+} from "../services/customer/favouriteSalonService.js";
 import { getNearbySalons as getNearbySalonsService } from "../services/customer/nearbySalonService.js";
 
 import { getAvailableSlots as getAvailableSlotsService } from "../services/customer/availableSlotsService.js";
@@ -186,7 +189,6 @@ export const deleteMyProfilePhoto = (req, res) => {
 
 // ==================== SALON DISCOVERY ====================
 
-
 const salonListResponse = async (res, feature, serviceCall) => {
   try {
     const salons = await serviceCall();
@@ -194,9 +196,7 @@ const salonListResponse = async (res, feature, serviceCall) => {
     return res.status(200).json({
       success: true,
       message:
-        salons.length === 0
-          ? "No salons found"
-          : "Salons fetched successfully",
+        salons.length === 0 ? "No salons found" : "Salons fetched successfully",
       data: salons,
     });
   } catch (error) {
@@ -205,23 +205,21 @@ const salonListResponse = async (res, feature, serviceCall) => {
 };
 
 export const getAllSalons = (req, res) =>
-  salonListResponse(res, "getAllSalons", () =>
-    getSalons(req.query)
-  );
+  salonListResponse(res, "getAllSalons", () => getSalons(req.query));
 
 export const searchSalons = (req, res) =>
   salonListResponse(res, "searchSalons", () =>
-    searchSalonsService(req.query.q)
+    searchSalonsService(req.query.q),
   );
 
 export const filterSalonsByArea = (req, res) =>
   salonListResponse(res, "filterSalonsByArea", () =>
-    filterSalonsByAreaService(req.query.area)
+    filterSalonsByAreaService(req.query.area),
   );
 
-  export const getNearbySalons = (req, res) =>
+export const getNearbySalons = (req, res) =>
   salonListResponse(res, "getNearbySalons", () =>
-    getNearbySalonsService(req.query)
+    getNearbySalonsService(req.query),
   );
 // export const getAllSalons = (req, res) =>
 //   run(res, "getAllSalons", () => getSalons(req.query));
@@ -611,7 +609,6 @@ export const getSuggestedSlots = (req, res) =>
     getSuggestedSlotsService(req.params.barberId, req.query),
   );
 
-
 export const addCustomerFavouriteSalon = (req, res) => {
   const userId = getAuthUserId(req);
 
@@ -620,11 +617,17 @@ export const addCustomerFavouriteSalon = (req, res) => {
   return run(
     res,
     "addFavouriteSalon",
-    () =>
-      addFavouriteSalonService(
-        userId,
-        req.params.salonId
-      ),
-    201
+    () => addFavouriteSalonService(userId, req.params.salonId),
+    201,
+  );
+};
+
+export const removeCustomerFavouriteSalon = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(res, "removeFavouriteSalon", () =>
+    removeFavouriteSalonService(userId, req.params.salonId)
   );
 };

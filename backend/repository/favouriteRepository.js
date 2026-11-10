@@ -28,3 +28,10 @@ export const createFavouriteSalon = async (
     salonId,
   });
 };
+
+export const deleteFavouriteSalon = async (customerId, salonId) => {
+  return Favourite.findOneAndDelete({
+    customerId,
+    salonId,
+  });
+};

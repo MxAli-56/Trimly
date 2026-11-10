@@ -5,6 +5,7 @@ import {
   findSalonById,
   findFavouriteSalon,
   createFavouriteSalon,
+  deleteFavouriteSalon,
 } from "../../repository/favouriteRepository.js";
 
 const createError = (message, statusCode = 400) => {
@@ -13,11 +14,7 @@ const createError = (message, statusCode = 400) => {
   return error;
 };
 
-export const addFavouriteSalon = async (
-  customerId,
-  salonId
-) => {
-  // Validate IDs
+export const addFavouriteSalon = async (customerId, salonId) => {
   if (!mongoose.isValidObjectId(customerId)) {
     throw createError("Invalid customer ID", 401);
   }
@@ -26,32 +23,20 @@ export const addFavouriteSalon = async (
     throw createError("Invalid salon ID");
   }
 
-  // Check salon exists
   const salon = await findSalonById(salonId);
 
   if (!salon) {
     throw createError("Salon not found", 404);
   }
 
-  // Check already favourite
-  const existing = await findFavouriteSalon(
-    customerId,
-    salonId
-  );
+  const existing = await findFavouriteSalon(customerId, salonId);
 
   if (existing) {
-    throw createError(
-      "Salon already added to favourites",
-      409
-    );
+    throw createError("Salon already added to favourites", 409);
   }
 
-  // Save favourite
   try {
-    const favourite = await createFavouriteSalon(
-      customerId,
-      salonId
-    );
+    const favourite = await createFavouriteSalon(customerId, salonId);
 
     return {
       favouriteId: favourite._id,
@@ -61,12 +46,30 @@ export const addFavouriteSalon = async (
     };
   } catch (error) {
     if (error.code === 11000) {
-      throw createError(
-        "Salon already added to favourites",
-        409
-      );
+      throw createError("Salon already added to favourites", 409);
     }
 
     throw error;
   }
+};
+
+export const removeFavouriteSalon = async (customerId, salonId) => {
+  if (!mongoose.isValidObjectId(customerId)) {
+    throw createError("Invalid customer ID", 401);
+  }
+
+  if (!mongoose.isValidObjectId(salonId)) {
+    throw createError("Invalid salon ID");
+  }
+
+  const favourite = await deleteFavouriteSalon(customerId, salonId);
+
+  if (!favourite) {
+    throw createError("Salon not found in favourites", 404);
+  }
+
+  return {
+    salonId,
+    message: "Salon removed from favourites successfully",
+  };
 };
