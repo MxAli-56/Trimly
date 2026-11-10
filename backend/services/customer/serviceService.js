@@ -30,7 +30,6 @@ export const getBranchCategories = async (branchId) => {
   throw new Error("NOT_IMPLEMENTED");
 };
 
-
 export const getServiceById = async (
   branchId,
   serviceId,
