@@ -31,6 +31,7 @@ const sendEmail = async (to, subject, htmlContent) => {
 
 export const sendResetPasswordLink = async (email, token) => {
   const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+  const expiryMinutes = process.env.RESET_TOKEN_EXPIRY_MINUTES;
 
   const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
@@ -44,7 +45,9 @@ export const sendResetPasswordLink = async (email, token) => {
                     Reset Password
                 </a>
             </div>
-            <p style="font-size: 14px; color: #666;">This link will expire in <strong>15 minutes</strong>.</p>
+            <p style="font-size: 14px; color: #666;">
+                This link will expire in <strong>${expiryMinutes} minutes</strong>.
+             </p>
             <p style="font-size: 14px; color: #666;">If you didn't request this, please ignore this email.</p>
             <hr />
             <p style="font-size: 12px; color: #999; text-align: center;">&copy; 2026 Trimly. All rights reserved.</p>
