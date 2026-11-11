@@ -9,11 +9,13 @@ export const requestPasswordReset = async (email) => {
   }
 
   const resetToken = crypto.randomBytes(32).toString("hex");
-  const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
+  const expiryMinutes = Number(process.env.RESET_TOKEN_EXPIRY_MINUTES);
+
+  const resetTokenExpiry = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
   await userRepository.updateUserById(user._id, {
-    resetToken,
-    resetTokenExpiry,
+  resetToken,
+  resetTokenExpiry,
   });
 
   return {
