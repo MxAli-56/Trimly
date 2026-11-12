@@ -11,6 +11,10 @@ import {
   removeFavouriteSalon as removeFavouriteSalonService,
   getFavouriteSalons as getFavouriteSalonsService,
 } from "../services/customer/favouriteSalonService.js";
+
+import {
+  addFavouriteBarber as addFavouriteBarberService,
+} from "../services/customer/favouriteBarberService.js";
 import { getNearbySalons as getNearbySalonsService } from "../services/customer/nearbySalonService.js";
 
 import { getAvailableSlots as getAvailableSlotsService } from "../services/customer/availableSlotsService.js";
@@ -640,5 +644,19 @@ export const getCustomerFavouriteSalons = (req, res) => {
 
   return run(res, "getFavouriteSalons", () =>
     getFavouriteSalonsService(userId)
+  );
+};
+
+
+export const addCustomerFavouriteBarber = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(
+    res,
+    "addFavouriteBarber",
+    () => addFavouriteBarberService(userId, req.params.barberId),
+    201
   );
 };

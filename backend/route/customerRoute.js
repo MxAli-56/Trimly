@@ -49,7 +49,8 @@ import {
   getNearbySalons,
   addCustomerFavouriteSalon,
   removeCustomerFavouriteSalon,
-  getCustomerFavouriteSalons
+  getCustomerFavouriteSalons,
+  addCustomerFavouriteBarber
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -200,7 +201,11 @@ router.post(
 //   removeCustomerFavouriteSalon
 // );
 
-
+router.post(
+  "/favorites/barbers/:barberId",
+  authenticate,
+  addCustomerFavouriteBarber
+);
 router.post(
   "/me/favorites/branches/:branchId",
   authenticate,

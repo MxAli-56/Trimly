@@ -46,3 +46,27 @@ export const findFavouriteSalonsByCustomer = async (customerId) => {
     .sort({ createdAt: -1 })
     .lean();
 };
+
+
+import BarberProfile from "../model/barberProfileModel.js";
+
+export const findBarberProfileById = async (barberId) => {
+  return BarberProfile.findOne({
+    _id: barberId,
+    deletedAt: null,
+  }).lean();
+};
+
+export const findFavouriteBarber = async (customerId, barberId) => {
+  return Favourite.findOne({
+    customerId,
+    barberId,
+  }).lean();
+};
+
+export const createFavouriteBarber = async (customerId, barberId) => {
+  return Favourite.create({
+    customerId,
+    barberId,
+  });
+};
