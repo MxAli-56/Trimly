@@ -35,3 +35,14 @@ export const deleteFavouriteSalon = async (customerId, salonId) => {
     salonId,
   });
 };
+
+export const findFavouriteSalonsByCustomer = async (customerId) => {
+  return Favourite.find({ customerId })
+    .populate({
+      path: "salonId",
+      select: "name address area city location isOpen avgRating ratingCount",
+      match: { deletedAt: null },
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+};

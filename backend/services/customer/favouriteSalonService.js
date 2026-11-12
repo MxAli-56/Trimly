@@ -6,6 +6,7 @@ import {
   findFavouriteSalon,
   createFavouriteSalon,
   deleteFavouriteSalon,
+  findFavouriteSalonsByCustomer,
 } from "../../repository/favouriteRepository.js";
 
 const createError = (message, statusCode = 400) => {
@@ -71,5 +72,34 @@ export const removeFavouriteSalon = async (customerId, salonId) => {
   return {
     salonId,
     message: "Salon removed from favourites successfully",
+  };
+};
+
+export const getFavouriteSalons = async (customerId) => {
+  if (!mongoose.isValidObjectId(customerId)) {
+    throw createError("Invalid customer ID", 401);
+  }
+
+  const favourites = await findFavouriteSalonsByCustomer(customerId);
+
+  const salons = favourites
+    .filter((favourite) => favourite.salonId !== null)
+    .map((favourite) => ({
+      favouriteId: favourite._id,
+      salonId: favourite.salonId._id,
+      name: favourite.salonId.name,
+      address: favourite.salonId.address,
+      area: favourite.salonId.area,
+      city: favourite.salonId.city,
+      location: favourite.salonId.location,
+      isOpen: favourite.salonId.isOpen,
+      avgRating: favourite.salonId.avgRating,
+      ratingCount: favourite.salonId.ratingCount,
+      addedAt: favourite.createdAt,
+    }));
+
+  return {
+    total: salons.length,
+    salons,
   };
 };
