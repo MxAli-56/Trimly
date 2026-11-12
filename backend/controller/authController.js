@@ -2,6 +2,7 @@ import * as registerService from "../services/auth/registerService.js";
 import * as loginService from "../services/auth/loginService.js";
 import * as passwordService from "../services/auth/passwordService.js";
 import * as otpService from "../services/auth/otpService.js";
+import * as logoutService from "../services/auth/logoutService.js";
 import User from "../model/userModel.js";
 
 export const Register = async (req, res) => {
@@ -211,6 +212,37 @@ export const VerifyOtp = async (req, res) => {
     return res.status(500).json({
       success: false,
       error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
+  }
+};
+
+export const Logout = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken || typeof refreshToken !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "REFRESH_TOKEN_REQUIRED",
+          message: "Refresh token is required",
+        },
+      });
+    }
+
+    await logoutService.logoutUser(refreshToken);
+
+    return res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: "SERVER_ERROR",
+        message: "Internal server error",
+      },
     });
   }
 };
