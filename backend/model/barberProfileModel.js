@@ -38,7 +38,6 @@ const barberProfileSchema = new mongoose.Schema(
 );
 
 barberProfileSchema.index({ currentBranchId: 1 });
-barberProfileSchema.index({ userId: 1 });
 
 const BarberProfile = mongoose.model("BarberProfile", barberProfileSchema);
 export default BarberProfile;
