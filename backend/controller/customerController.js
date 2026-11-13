@@ -10,10 +10,12 @@ import {
   addFavouriteSalon as addFavouriteSalonService,
   removeFavouriteSalon as removeFavouriteSalonService,
   getFavouriteSalons as getFavouriteSalonsService,
+  
 } from "../services/customer/favouriteSalonService.js";
 
 import {
   addFavouriteBarber as addFavouriteBarberService,
+  removeFavouriteBarber,
 } from "../services/customer/favouriteBarberService.js";
 import { getNearbySalons as getNearbySalonsService } from "../services/customer/nearbySalonService.js";
 
@@ -659,4 +661,46 @@ export const addCustomerFavouriteBarber = (req, res) => {
     () => addFavouriteBarberService(userId, req.params.barberId),
     201
   );
+};
+
+
+
+export const removeCustomerFavouriteBarber = async (req, res) => {
+  try {
+    const customerId =
+      req.user?.id ??
+      req.user?._id ??
+      req.userId;
+
+    if (!customerId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const { barberId } = req.params;
+
+    const result = await removeFavouriteBarber(
+      customerId,
+      barberId
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: {
+        barberId: result.barberId,
+      },
+    });
+  } catch (error) {
+    console.error("REMOVE FAVOURITE BARBER ERROR:", error);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.statusCode
+        ? error.message
+        : "Internal server error",
+    });
+  }
 };

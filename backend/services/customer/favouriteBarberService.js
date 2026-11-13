@@ -1,10 +1,10 @@
-
 import mongoose from "mongoose";
 
 import {
   findBarberProfileById,
   findFavouriteBarber,
   createFavouriteBarber,
+  deleteFavouriteBarber,
 } from "../../repository/customer/favouriteRepository.js";
 
 const createError = (message, statusCode = 400) => {
@@ -49,4 +49,29 @@ export const addFavouriteBarber = async (customerId, barberId) => {
 
     throw error;
   }
+};
+
+
+export const removeFavouriteBarber = async (customerId, barberId) => {
+  if (!mongoose.Types.ObjectId.isValid(customerId)) {
+    throw createError("Invalid customer ID", 400);
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(barberId)) {
+    throw createError("Invalid barber ID", 400);
+  }
+
+  const deletedFavourite = await deleteFavouriteBarber(
+    customerId,
+    barberId
+  );
+
+  if (!deletedFavourite) {
+    throw createError("Barber not found in favourites", 404);
+  }
+
+  return {
+    barberId: deletedFavourite.barberId,
+    message: "Barber removed from favourites successfully",
+  };
 };

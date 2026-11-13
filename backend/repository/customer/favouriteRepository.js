@@ -1,6 +1,7 @@
 
 import Favourite from "../../model/favouriteModel.js";
 import Branch from "../../model/branchModel.js";
+import BarberProfile from "../../model/barberProfileModel.js";
 
 export const findSalonById = async (salonId) => {
   return Branch.findOne({
@@ -48,7 +49,6 @@ export const findFavouriteSalonsByCustomer = async (customerId) => {
 };
 
 
-import BarberProfile from "../../model/barberProfileModel.js";
 
 export const findBarberProfileById = async (barberId) => {
   return BarberProfile.findOne({
@@ -66,6 +66,14 @@ export const findFavouriteBarber = async (customerId, barberId) => {
 
 export const createFavouriteBarber = async (customerId, barberId) => {
   return Favourite.create({
+    customerId,
+    barberId,
+  });
+};
+
+
+export const deleteFavouriteBarber = async (customerId, barberId) => {
+  return Favourite.findOneAndDelete({
     customerId,
     barberId,
   });

@@ -50,7 +50,8 @@ import {
   addCustomerFavouriteSalon,
   removeCustomerFavouriteSalon,
   getCustomerFavouriteSalons,
-  addCustomerFavouriteBarber
+  addCustomerFavouriteBarber,
+  removeCustomerFavouriteBarber
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -181,7 +182,12 @@ router.get("/barbers/:barberId", authenticate, getBarberDetails);
 // FAVORITES
 // ========================================
 
-router.get("/me/favorites", authenticate, getMyFavorites);
+
+router.get(
+  "/me/favorites",
+  authenticate,
+  getMyFavorites
+);
 
 router.get(
   "/favorites/salons",
@@ -195,40 +201,50 @@ router.post(
   addCustomerFavouriteSalon
 );
 
-// router.delete(
-//   "/favorites/salons/:salonId",
-//   authenticate,
-//   removeCustomerFavouriteSalon
-// );
+router.delete(
+  "/favorites/salons/:salonId",
+  authenticate,
+  removeCustomerFavouriteSalon
+);
 
 router.post(
   "/favorites/barbers/:barberId",
   authenticate,
   addCustomerFavouriteBarber
 );
+
+// NEW: Remove Favourite Barber
+router.delete(
+  "/favorites/barbers/:barberId",
+  authenticate,
+  removeCustomerFavouriteBarber
+);
+
+// Existing favourites routes
 router.post(
   "/me/favorites/branches/:branchId",
   authenticate,
-  addBranchToFavorites,
+  addBranchToFavorites
 );
 
 router.delete(
   "/me/favorites/branches/:branchId",
   authenticate,
-  removeBranchFromFavorites,
+  removeBranchFromFavorites
 );
 
 router.post(
   "/me/favorites/barbers/:barberId",
   authenticate,
-  addBarberToFavorites,
+  addBarberToFavorites
 );
 
 router.delete(
   "/me/favorites/barbers/:barberId",
   authenticate,
-  removeBarberFromFavorites,
+  removeBarberFromFavorites
 );
+
 
 // ========================================
 // RATINGS & REVIEWS
