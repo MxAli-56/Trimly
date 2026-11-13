@@ -1,6 +1,5 @@
+import "../config/env.js";
 import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-dotenv.config();
 
 const transporter = nodemailer.createTransport({
   host: process.env.MAILTRAP_HOST,
@@ -13,7 +12,7 @@ const transporter = nodemailer.createTransport({
 
 const sendEmail = async (to, subject, htmlContent) => {
   const mailOptions = {
-    from: '"Trimly" <no-reply@trimly.com>', 
+    from: '"Trimly" <no-reply@trimly.com>',
     to: to,
     subject: subject,
     html: htmlContent,

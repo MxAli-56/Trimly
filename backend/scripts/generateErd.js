@@ -1,6 +1,6 @@
+import "../config/env.js";
 import mongoose from "mongoose";
 import { mongooseToErdMain } from "mongoose-to-erd";
-import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 

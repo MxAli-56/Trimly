@@ -1,6 +1,6 @@
+import "../config/env.js";
 import { setServers } from "dns";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 
 import User from "../model/userModel.js";
@@ -10,9 +10,6 @@ import Service from "../model/serviceModel.js";
 import BarberProfile from "../model/barberProfileModel.js";
 import BarberSchedule from "../model/barberScheduleModel.js";
 
-dotenv.config({
-  path: "../.env",
-});
 setServers(["8.8.8.8", "1.1.1.1"]);
 
 const seedTestData = async () => {

@@ -1,6 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config({ path: "../.env" });
-
+import "../config/env.js";
 import { v2 as cloudinary } from "cloudinary";
 
 console.log("Cloudinary env check:", {
