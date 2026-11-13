@@ -81,3 +81,26 @@ export const deleteFavouriteBarber = async (customerId, barberId) => {
     barberId,
   });
 };
+
+export const findFavouriteBarbersByCustomer = async (customerId) => {
+  return Favourite.find({
+    customerId,
+    barberId: { $type: "objectId" },
+  })
+    .populate({
+      path: "barberId",
+      match: { deletedAt: null },
+      populate: [
+        {
+          path: "userId",
+          select: "name profilePhoto",
+        },
+        {
+          path: "branchId",
+          select: "name address area city",
+        },
+      ],
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+};

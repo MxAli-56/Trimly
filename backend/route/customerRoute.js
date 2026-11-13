@@ -52,6 +52,7 @@ import {
   getCustomerFavouriteSalons,
   addCustomerFavouriteBarber,
   removeCustomerFavouriteBarber,
+  getCustomerFavouriteBarbers
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -212,6 +213,7 @@ router.delete(
   removeCustomerFavouriteBarber,
 );
 
+router.get("/favorites/barbers", authenticate, getCustomerFavouriteBarbers);
 // Existing favourites routes
 router.post(
   "/me/favorites/branches/:branchId",

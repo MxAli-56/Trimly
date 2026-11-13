@@ -16,6 +16,7 @@ import {
 import {
   addFavouriteBarber as addFavouriteBarberService,
   removeFavouriteBarber,
+  getFavouriteBarbers as getFavouriteBarbersService,
 } from "../services/customer/favouriteBarberService.js";
 import { getNearbySalons as getNearbySalonsService } from "../services/customer/nearbySalonService.js";
 
@@ -707,4 +708,19 @@ export const removeCustomerFavouriteBarber = async (req, res) => {
         : "Internal server error",
     });
   }
+};
+
+
+export const getCustomerFavouriteBarbers = (req, res) => {
+  const customerId = getAuthUserId(req);
+
+  if (!customerId) {
+    return unauthorized(res);
+  }
+
+  return run(
+    res,
+    "getFavouriteBarbers",
+    () => getFavouriteBarbersService(customerId)
+  );
 };

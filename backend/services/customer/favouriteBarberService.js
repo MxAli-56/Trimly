@@ -5,6 +5,7 @@ import {
   findFavouriteBarber,
   createFavouriteBarber,
   deleteFavouriteBarber,
+  findFavouriteBarbersByCustomer,
 } from "../../repository/customer/favouriteRepository.js";
 
 const createError = (message, statusCode = 400) => {
@@ -73,5 +74,35 @@ export const removeFavouriteBarber = async (customerId, barberId) => {
   return {
     barberId: deletedFavourite.barberId,
     message: "Barber removed from favourites successfully",
+  };
+};
+
+
+export const getFavouriteBarbers = async (customerId) => {
+  if (!mongoose.isValidObjectId(customerId)) {
+    throw createError("Invalid customer ID", 400);
+  }
+
+  const favourites = await findFavouriteBarbersByCustomer(customerId);
+
+  const barbers = favourites
+    .filter((item) => item.barberId && item.barberId.userId)
+    .map((item) => ({
+      favouriteId: item._id,
+      barberId: item.barberId._id,
+      name: item.barberId.userId.name,
+      profilePhoto: item.barberId.userId.profilePhoto,
+      bio: item.barberId.bio,
+      specialties: item.barberId.specialties,
+      isAvailable: item.barberId.isAvailable,
+      avgRating: item.barberId.avgRating,
+      ratingCount: item.barberId.ratingCount,
+      salon: item.barberId.branchId,
+      addedAt: item.createdAt,
+    }));
+
+  return {
+    total: barbers.length,
+    barbers,
   };
 };
