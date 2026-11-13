@@ -45,3 +45,11 @@ export const findBarberProfile = async (barberProfileId) => {
     deletedAt: null,
   }).lean();
 };
+
+export const updateAvailabilityStatus = async (barberProfileId, isAvailable) => {
+  return await BarberProfile.findByIdAndUpdate(
+    barberProfileId,
+    { $set: { isAvailable } },
+    { new: true }
+  ).select("_id isAvailable");
+};

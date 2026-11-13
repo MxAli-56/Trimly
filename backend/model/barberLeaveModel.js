@@ -19,5 +19,6 @@ const barberLeaveSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+barberLeaveSchema.index({ barberProfileId: 1, leaveDate: 1 });
 const BarberLeave = mongoose.model("BarberLeave", barberLeaveSchema);
 export default BarberLeave;
