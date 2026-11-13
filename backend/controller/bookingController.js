@@ -16,6 +16,8 @@ import { getAppointmentCode } from "../services/booking/appointmentCodeService.j
 
 import { checkCancellationEligibility } from "../services/booking/cancellationEligibilityService.js";
 
+import { requestBookingWithTimer } from "../services/booking/requestBookingService.js";
+
 import {
   getMyBookings,
   getBookingById,
@@ -73,16 +75,38 @@ const run = async (res, feature, serviceCall, statusCode = 200) => {
   }
 };
 
-export const createCustomerBooking = (req, res) => {
+export const createCustomerBooking = async (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
-  return run(
-    res,
-    "createCustomerBooking",
-    () => createBooking(userId, req.body),
-    201
-  );
+  try {
+    const result = await requestBookingWithTimer(userId, req.body);
+    return res.status(201).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    if (
+      error.message === "BARBER_NOT_FOUND" ||
+      error.message === "INVALID_SERVICES"
+    ) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Barber or service not found." });
+    }
+    if (error.message === "SLOT_NOT_AVAILABLE") {
+      return res
+        .status(409)
+        .json({
+          success: false,
+          message: "This slot is already booked or on hold.",
+        });
+    }
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
 };
 
 export const getCustomerBookings = (req, res) => {

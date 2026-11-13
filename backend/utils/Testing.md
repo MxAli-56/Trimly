@@ -65,3 +65,39 @@ URL: http://localhost:5000/api/barber/leaves/<LEAVE_ID>
 Headers: Authorization: Bearer <BARBER_TOKEN>
 
 Expected Response: 200 OK
+
+
+
+
+7. Create Request
+
+Method: POST
+
+URL: http://localhost:5000/api/bookings/request
+
+Headers: Authorization: Bearer <CUSTOMER_TOKEN>
+
+Body:
+
+json
+{
+  "barberProfileId": "YAHAN_BARBER_PROFILE_KI_ID_PASTE_KARO",
+  "serviceIds": ["YAHAN_SERVICE_KI_ID_PASTE_KARO"],
+  "date": "2026-11-15",
+  "startTime": "10:00"
+}
+(Customer token seed script se testcustomer@trimly.com se login karke lo).
+
+Expected Response:
+
+json
+{
+  "success": true,
+  "message": "Booking requested. Barber has 2 minutes to accept.",
+  "data": {
+    "bookingId": "...",
+    "appointmentCode": "TRM-A1B2C3",
+    "holdExpiresAt": "2026-11-15T...",
+    "message": "..."
+  }
+}

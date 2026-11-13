@@ -340,3 +340,25 @@ export const findBookingsForDate = async (barberUserId, dateStart, dateEnd) => {
     .select("startTime endTime statusId holdExpiresAt")
     .lean();
 };
+
+export const createPendingBooking = async (bookingData) => {
+  return await Booking.create(bookingData);
+};
+
+export const findConflictingBookings = async (barberUserId, date, startTime, endTime) => {
+  return await Booking.find({
+    barberId: barberUserId,
+    bookingDate: date,
+    deletedAt: null,
+    $or: [
+      { statusId: { $ne: null } }, 
+      { 
+        holdExpiresAt: { $gt: new Date() } 
+      }
+    ],
+    $and: [
+      { startTime: { $lt: endTime } },
+      { endTime: { $gt: startTime } }
+    ]
+  }).populate("statusId").lean();
+};
