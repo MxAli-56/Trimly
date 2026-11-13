@@ -9,7 +9,7 @@ import {
   updatePassword,
   VerifyOtp,
   Logout
-} from '../controller/authController.js';
+} from '../controller/AuthController.js';
 import authenticate from '../middleware/Auth.js';
 import { validateBody } from '../middleware/validateBody.js'; 
 import { registerSchema } from '../validation/auth/registerValidation.js';
