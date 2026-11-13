@@ -73,5 +73,4 @@ barberScheduleSchema.index(
 );
 
 const BarberSchedule = mongoose.model("BarberSchedule", barberScheduleSchema);
-
 export default BarberSchedule;

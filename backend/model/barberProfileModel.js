@@ -5,51 +5,40 @@ const barberProfileSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "User reference is required"],
+      required: true,
       unique: true,
     },
-    branchId: {
+
+    currentBranchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Branch",
-      required: [true, "Branch reference is required"],
-    },
-    bio: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    specialties: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    isAvailable: {
-      type: Boolean,
-      default: true,
-    },
-    avgRating: {
-      type: Number,
-      default: 0.0,
-      min: [0, "Rating cannot be less than 0"],
-      max: [5, "Rating cannot be more than 5"],
-    },
-    ratingCount: {
-      type: Number,
-      default: 0,
-    },
-    deletedAt: {
-      type: Date,
       default: null,
     },
+
+    employmentHistory: [
+      {
+        branchId: { type: mongoose.Schema.Types.ObjectId, ref: "Branch" },
+        joinedAt: { type: Date },
+        leftAt: { type: Date, default: null },
+        reason: { type: String },
+      },
+    ],
+
+    bio: { type: String, default: "", trim: true },
+    specialties: [{ type: String, trim: true }],
+
+    isAvailable: { type: Boolean, default: false },
+
+    avgRating: { type: Number, default: 0.0 },
+    ratingCount: { type: Number, default: 0 },
+
+    deletedAt: { type: Date, default: null },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
-barberProfileSchema.index({ branchId: 1 });
+barberProfileSchema.index({ currentBranchId: 1 });
+barberProfileSchema.index({ userId: 1 });
 
 const BarberProfile = mongoose.model("BarberProfile", barberProfileSchema);
-
 export default BarberProfile;
