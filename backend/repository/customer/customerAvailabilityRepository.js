@@ -1,8 +1,8 @@
 
-import BarberProfile from "../model/barberProfileModel.js";
-import BarberSchedule from "../model/barberScheduleModel.js";
-import Booking from "../model/bookingModel.js";
-import Service from "../model/serviceModel.js";
+import BarberProfile from "../../model/barberProfileModel.js";
+import BarberSchedule from "../../model/barberScheduleModel.js";
+import Booking from "../../model/bookingModel.js";
+import Service from "../../model/serviceModel.js";
 
 // Find barber using BarberProfile ID
 export const findBarberProfile = async (barberProfileId) => {

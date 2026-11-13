@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import * as barberRepository from "../../repository/barberRepository.js";
+import * as barberRepository from "../../repository/customer/barberRepository.js";
 
 export const getBranchBarbers = async (branchId, query = {}) => {
   if (!branchId) {

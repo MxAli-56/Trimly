@@ -1,6 +1,6 @@
 
 import mongoose from "mongoose";
-import * as serviceRepository from "../../repository/serviceRepository.js";
+import * as serviceRepository from "../../repository/customer/serviceRepository.js";
 
 // ==========================================
 // Get Services By Category

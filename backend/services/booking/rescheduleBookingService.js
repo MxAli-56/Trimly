@@ -7,7 +7,7 @@ import {
   findBookingForReschedule,
   updateBookingReschedule,
   findOverlappingBookings,
-} from "../../repository/bookingRepository.js";
+} from "../../repository/customer/bookingRepository.js";
 
 import { STATUS_TYPES } from "../../config/status.js";
 

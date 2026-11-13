@@ -1,6 +1,6 @@
-import BarberProfile from "../model/barberProfileModel.js";
-import User from "../model/userModel.js";
-import Branch from "../model/branchModel.js";
+import BarberProfile from "../../model/barberProfileModel.js";
+import User from "../../model/userModel.js";
+import Branch from "../../model/branchModel.js";
 
 export const findBarbersByBranchId = async (branchId) => {
   return await BarberProfile.find({

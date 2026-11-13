@@ -1,5 +1,5 @@
-import Service from "../model/serviceModel.js";
-import Category from "../model/categoryModel.js";
+import Service from "../../model/serviceModel.js";
+import Category from "../../model/categoryModel.js";
 import mongoose from "mongoose";
 
 

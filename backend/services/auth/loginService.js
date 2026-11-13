@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import * as userRepository from "../../repository/userRepository.js";
+import * as userRepository from "../../repository/customer/userRepository.js";
 import { generateAuthTokens } from "./tokenService.js";
 
 export const loginUser = async (credentials, reqDetails = {}) => {

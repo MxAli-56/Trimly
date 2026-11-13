@@ -1,7 +1,7 @@
 
 import mongoose from "mongoose";
 
-import { findBookingCancellationDetails } from "../../repository/bookingRepository.js";
+import { findBookingCancellationDetails } from "../../repository/customer/bookingRepository.js";
 
 import { STATUS_TYPES } from "../../config/status.js";
 

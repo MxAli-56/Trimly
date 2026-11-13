@@ -5,12 +5,12 @@ import {
   findBookingStatus,
   createBookingRecord,
   findOverlappingBookings,
-} from "../../repository/bookingRepository.js";
+} from "../../repository/customer/bookingRepository.js";
 
 import {
   findBarberProfile,
   findActiveService,
-} from "../../repository/customerAvailabilityRepository.js";
+} from "../../repository/customer/customerAvailabilityRepository.js";
 
 import { STATUS_TYPES } from "../../config/status.js";
 

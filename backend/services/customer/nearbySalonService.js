@@ -1,7 +1,7 @@
 
 import {
   findNearbyBranches,
-} from "../../repository/branchRepository.js";
+} from "../../repository/customer/branchRepository.js";
 
 const createError = (message) => {
   const error = new Error(message);

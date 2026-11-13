@@ -1,6 +1,6 @@
 
 import mongoose from "mongoose";
-import * as userRepository from "../../repository/userRepository.js";
+import * as userRepository from "../../repository/customer/userRepository.js";
 
 const notImplemented = () => {
   const error = new Error("NOT_IMPLEMENTED");

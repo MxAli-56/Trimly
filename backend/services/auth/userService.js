@@ -1,4 +1,4 @@
-import * as userRepository from "../../repository/userRepository.js";
+import * as userRepository from "../../repository/customer/userRepository.js";
 
 export const getUserProfile = async (userId) => {
   const user = await userRepository.findByIdSelect(

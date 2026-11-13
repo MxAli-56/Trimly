@@ -1,5 +1,5 @@
-import Review from "../model/reviewModel.js";
-import User from "../model/userModel.js";
+import Review from "../../model/reviewModel.js";
+import User from "../../model/userModel.js";
 import mongoose from "mongoose";
 
 export const findReviewsByBarberId = async (barberUserId) => {

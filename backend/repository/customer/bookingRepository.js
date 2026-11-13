@@ -1,7 +1,7 @@
 
-import Booking from "../model/bookingModel.js";
-import Status from "../model/statusModel.js";
-import Payment from "../model/paymentModel.js";
+import Booking from "../../model/bookingModel.js";
+import Status from "../../model/statusModel.js";
+import Payment from "../../model/paymentModel.js";
 // Find initial booking status
 export const findBookingStatus = async (name, type) => {
   return Status.findOne({

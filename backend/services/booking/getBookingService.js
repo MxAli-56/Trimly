@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import { findBookingsByCustomer } from "../../repository/bookingRepository.js";
-import { findBookingByIdAndCustomer } from "../../repository/bookingRepository.js";
+import { findBookingsByCustomer } from "../../repository/customer/bookingRepository.js";
+import { findBookingByIdAndCustomer } from "../../repository/customer/bookingRepository.js";
 
 
 export const getMyBookings = async (userId, query = {}) => {

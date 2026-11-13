@@ -1,7 +1,7 @@
 
 import mongoose from "mongoose";
-import * as reviewRepository from "../../repository/reviewRepository.js";
-import * as barberRepository from "../../repository/barberRepository.js";
+import * as reviewRepository from "../../repository/customer/reviewRepository.js";
+import * as barberRepository from "../../repository/customer/barberRepository.js";
 
 // ==========================================
 // Get Barber Rating

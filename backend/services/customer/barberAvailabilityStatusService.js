@@ -1,6 +1,6 @@
 
 import mongoose from "mongoose";
-import * as availabilityRepository from "../../repository/barberAvailabilityRepository.js";
+import * as availabilityRepository from "../../repository/customer/barberAvailabilityRepository.js";
 
 const createError = (message, statusCode) => {
   const error = new Error(message);

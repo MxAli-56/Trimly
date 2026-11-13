@@ -5,7 +5,7 @@ import {
   findBarberProfileById,
   findFavouriteBarber,
   createFavouriteBarber,
-} from "../../repository/favouriteRepository.js";
+} from "../../repository/customer/favouriteRepository.js";
 
 const createError = (message, statusCode = 400) => {
   const error = new Error(message);

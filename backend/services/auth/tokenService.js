@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import * as authTokenRepository from "../../repository/authTokenRepository.js";
+import * as authTokenRepository from "../../repository/customer/authTokenRepository.js";
 
 export const generateAuthTokens = async (user, reqDetails = {}) => {
   const accessToken = jwt.sign(

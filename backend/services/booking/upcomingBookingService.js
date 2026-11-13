@@ -1,7 +1,7 @@
 
 import mongoose from "mongoose";
 
-import { findUpcomingBookingsByCustomer } from "../../repository/bookingRepository.js";
+import { findUpcomingBookingsByCustomer } from "../../repository/customer/bookingRepository.js";
 
 export const getUpcomingBookings = async (
   userId,

@@ -1,6 +1,6 @@
 
-import Favourite from "../model/favouriteModel.js";
-import Branch from "../model/branchModel.js";
+import Favourite from "../../model/favouriteModel.js";
+import Branch from "../../model/branchModel.js";
 
 export const findSalonById = async (salonId) => {
   return Branch.findOne({
@@ -48,7 +48,7 @@ export const findFavouriteSalonsByCustomer = async (customerId) => {
 };
 
 
-import BarberProfile from "../model/barberProfileModel.js";
+import BarberProfile from "../../model/barberProfileModel.js";
 
 export const findBarberProfileById = async (barberId) => {
   return BarberProfile.findOne({

@@ -1,7 +1,7 @@
 
 import mongoose from "mongoose";
 import cloudinary from "../../config/cloudinary.js";
-import * as userRepository from "../../repository/userRepository.js";
+import * as userRepository from "../../repository/customer/userRepository.js";
 
 // ==========================================
 // Upload Image Buffer to Cloudinary

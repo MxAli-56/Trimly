@@ -1,7 +1,7 @@
 
 import mongoose from "mongoose";
 
-import { findBookingAppointmentCode } from "../../repository/bookingRepository.js";
+import { findBookingAppointmentCode } from "../../repository/customer/bookingRepository.js";
 
 import { STATUS_TYPES } from "../../config/status.js";
 

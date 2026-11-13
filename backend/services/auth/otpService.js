@@ -1,6 +1,6 @@
 import adminAuth from "../../config/firebase.js";
 import bcrypt from "bcrypt";
-import * as userRepository from "../../repository/userRepository.js";
+import * as userRepository from "../../repository/customer/userRepository.js";
 import { normalizePhoneForDB } from "../../utils/phoneFormatter.js";
 import { ROLES } from "../../config/role.js";
 

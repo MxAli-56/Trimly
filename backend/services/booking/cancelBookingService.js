@@ -5,7 +5,7 @@ import {
   findBookingStatus,
   findBookingForCancellation,
   updateBookingCancellation,
-} from "../../repository/bookingRepository.js";
+} from "../../repository/customer/bookingRepository.js";
 
 import { STATUS_TYPES } from "../../config/status.js";
 

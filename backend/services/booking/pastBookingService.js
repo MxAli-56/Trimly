@@ -1,7 +1,7 @@
 
 import mongoose from "mongoose";
 
-import { findPastBookingsByCustomer } from "../../repository/bookingRepository.js";
+import { findPastBookingsByCustomer } from "../../repository/customer/bookingRepository.js";
 
 const createError = (message, statusCode = 400) => {
   const error = new Error(message);

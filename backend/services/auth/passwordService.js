@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
-import * as userRepository from "../../repository/userRepository.js";
+import * as userRepository from "../../repository/customer/userRepository.js";
 
 export const requestPasswordReset = async (email) => {
   const user = await userRepository.findByEmailNotDeleted(email);

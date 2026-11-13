@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import * as branchRepository from "../../repository/branchRepository.js";
+import * as branchRepository from "../../repository/customer/branchRepository.js";
 
 export const getSalonOpeningHours = async (branchId) => {
   // Step 1: Validate salon ID

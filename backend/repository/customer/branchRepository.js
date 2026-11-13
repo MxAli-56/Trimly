@@ -1,4 +1,4 @@
-import Branch from "../model/branchModel.js";
+import Branch from "../../model/branchModel.js";
 import mongoose from "mongoose";
 
 

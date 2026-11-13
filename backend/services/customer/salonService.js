@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import * as reviewRepository from "../../repository/reviewRepository.js";
-import * as branchRepository from "../../repository/branchRepository.js";
+import * as reviewRepository from "../../repository/customer/reviewRepository.js";
+import * as branchRepository from "../../repository/customer/branchRepository.js";
 
 
 export const getSalons = async (query = {}) => {
