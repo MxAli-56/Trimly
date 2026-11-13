@@ -1,27 +1,27 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import { sendResetPasswordLink } from "../../utils/emailMailTrap.js";
 import * as userRepository from "../../repository/userRepository.js";
 
 export const requestPasswordReset = async (email) => {
   const user = await userRepository.findByEmailNotDeleted(email);
+
   if (!user) {
     return { success: true };
   }
 
   const resetToken = crypto.randomBytes(32).toString("hex");
-  const expiryMinutes = Number(process.env.RESET_TOKEN_EXPIRY_MINUTES);
-
+  const expiryMinutes = Number(process.env.RESET_TOKEN_EXPIRY_MINUTES) || 15;
   const resetTokenExpiry = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
   await userRepository.updateUserById(user._id, {
-  resetToken,
-  resetTokenExpiry,
+    resetToken,
+    resetTokenExpiry,
   });
 
-  return {
-    email: user.email,
-    resetToken,
-  };
+  await sendResetPasswordLink(user.email, resetToken);
+
+  return { success: true }; 
 };
 
 export const verifyResetTokenService = async (token) => {
