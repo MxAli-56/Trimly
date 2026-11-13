@@ -77,25 +77,18 @@ export const removeFavouriteSalon = async (customerId, salonId) => {
 
 export const getFavouriteSalons = async (customerId) => {
   if (!mongoose.isValidObjectId(customerId)) {
-    throw createError("Invalid customer ID", 401);
+    const error = new Error("Invalid customer ID");
+    error.statusCode = 400;
+    throw error;
   }
 
   const favourites = await findFavouriteSalonsByCustomer(customerId);
 
   const salons = favourites
-    .filter((favourite) => favourite.salonId !== null)
-    .map((favourite) => ({
-      favouriteId: favourite._id,
-      salonId: favourite.salonId._id,
-      name: favourite.salonId.name,
-      address: favourite.salonId.address,
-      area: favourite.salonId.area,
-      city: favourite.salonId.city,
-      location: favourite.salonId.location,
-      isOpen: favourite.salonId.isOpen,
-      avgRating: favourite.salonId.avgRating,
-      ratingCount: favourite.salonId.ratingCount,
-      addedAt: favourite.createdAt,
+    .filter((item) => item.salonId)
+    .map((item) => ({
+      favouriteId: item._id,
+      ...item.salonId,
     }));
 
   return {

@@ -640,12 +640,16 @@ export const removeCustomerFavouriteSalon = (req, res) => {
 };
 
 export const getCustomerFavouriteSalons = (req, res) => {
-  const userId = getAuthUserId(req);
+  const customerId = getAuthUserId(req);
 
-  if (!userId) return unauthorized(res);
+  if (!customerId) {
+    return unauthorized(res);
+  }
 
-  return run(res, "getFavouriteSalons", () =>
-    getFavouriteSalonsService(userId)
+  return run(
+    res,
+    "getFavouriteSalons",
+    () => getFavouriteSalonsService(customerId)
   );
 };
 

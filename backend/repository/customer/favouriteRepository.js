@@ -38,11 +38,14 @@ export const deleteFavouriteSalon = async (customerId, salonId) => {
 };
 
 export const findFavouriteSalonsByCustomer = async (customerId) => {
-  return Favourite.find({ customerId })
+  return Favourite.find({
+    customerId,
+    salonId: { $type: "objectId" },
+  })
     .populate({
       path: "salonId",
-      select: "name address area city location isOpen avgRating ratingCount",
       match: { deletedAt: null },
+      select: "name address area city location isOpen avgRating ratingCount",
     })
     .sort({ createdAt: -1 })
     .lean();
