@@ -1,15 +1,5 @@
 import express from 'express';
-import {
-  Register,
-  Login,
-  getProfile,
-  ForgotPassword,
-  verifyResetToken,
-  ResetPassword,
-  updatePassword,
-  VerifyOtp,
-  Logout
-} from '../controller/AuthController.js';
+import {Register, Login, getProfile, ForgotPassword, verifyResetToken, ResetPassword, updatePassword, VerifyOtp, Logout,} from '../controller/authController.js';
 import authenticate from '../middleware/Auth.js';
 import { validateBody } from '../middleware/validateBody.js'; 
 import { registerSchema } from '../validation/auth/registerValidation.js';

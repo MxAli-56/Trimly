@@ -1,6 +1,7 @@
-
 import mongoose from "mongoose";
-import * as availabilityRepository from "../../repository/barberAvailabilityRepository.js";
+import * as barberProfileRepository from "../../repository/barberProfileRepository.js";
+import * as barberScheduleRepository from "../../repository/barberScheduleRepository.js";
+import * as bookingRepository from "../../repository/bookingRepository.js";
 
 const createError = (message, statusCode) => {
   const error = new Error(message);
@@ -18,67 +19,42 @@ const getKarachiTime = () => {
   }).formatToParts(new Date());
 
   const values = Object.fromEntries(
-    parts.map(({ type, value }) => [type, value])
+    parts.map(({ type, value }) => [type, value]),
   );
 
   return {
-    day: values.weekday.toLowerCase(),
+    day: values.weekday.toUpperCase(),
     time: `${values.hour}:${values.minute}`,
   };
 };
 
-export const getBarberAvailabilityStatus = async (barberId) => {
-  // Step 1: Validate ID
-  if (!mongoose.isValidObjectId(barberId)) {
-    throw createError("Invalid barber ID", 400);
+export const getBarberAvailabilityStatus = async (barberProfileId) => {
+  if (!mongoose.isValidObjectId(barberProfileId)) {
+    throw createError("Invalid barber profile ID", 400);
   }
 
-  // Step 2: Find barber profile
   const barber =
-    await availabilityRepository.findActiveBarberProfile(barberId);
+    await barberProfileRepository.findActiveBarberProfile(barberProfileId);
+  if (!barber) throw createError("Barber not found", 404);
 
-  if (!barber) {
-    throw createError("Barber not found", 404);
-  }
-
-  // Step 3: Check barber active status
-  if (barber.isActive === false) {
+  if (barber.isAvailable === false) {
     return {
-      barberId,
+      barberId: barberProfileId,
       isAvailable: false,
       status: "INACTIVE",
-      message: "Barber is currently inactive",
+      message: "Barber is currently offline",
     };
   }
 
-  // Step 4: Fetch schedule
-  const schedule =
-    await availabilityRepository.findBarberSchedule(barberId);
-
-  if (!schedule) {
-    return {
-      barberId,
-      isAvailable: false,
-      status: "SCHEDULE_NOT_CONFIGURED",
-      message: "Barber schedule is not configured",
-    };
-  }
-
-  // Step 5: Check current working hours
   const { day, time } = getKarachiTime();
+  const todaySchedule = await barberScheduleRepository.findScheduleByDay(
+    barberProfileId,
+    day,
+  );
 
-  // Assumes schedule.workingHours is an object
-  // keyed by weekday, e.g. monday: { open, close }
-  const todaySchedule = schedule.workingHours?.[day];
-
-  if (
-    !todaySchedule ||
-    todaySchedule.isOff === true ||
-    !todaySchedule.open ||
-    !todaySchedule.close
-  ) {
+  if (!todaySchedule || !todaySchedule.isWorkingDay) {
     return {
-      barberId,
+      barberId: barberProfileId,
       isAvailable: false,
       status: "OFF_DUTY",
       message: "Barber is not working today",
@@ -86,76 +62,67 @@ export const getBarberAvailabilityStatus = async (barberId) => {
   }
 
   const isWorkingNow =
-    time >= todaySchedule.open &&
-    time < todaySchedule.close;
-
+    time >= todaySchedule.startTime && time < todaySchedule.endTime;
   if (!isWorkingNow) {
     return {
-      barberId,
+      barberId: barberProfileId,
       isAvailable: false,
       status: "OFF_DUTY",
       message: "Barber is outside working hours",
     };
   }
 
-  // Step 6: Check active booking
-  const currentBooking =
-    await availabilityRepository.findCurrentBooking(
-      barberId,
-      new Date()
-    );
+  if (todaySchedule.breakStart && todaySchedule.breakEnd) {
+    if (time >= todaySchedule.breakStart && time < todaySchedule.breakEnd) {
+      return {
+        barberId: barberProfileId,
+        isAvailable: false,
+        status: "ON_BREAK",
+        message: "Barber is on break",
+      };
+    }
+  }
+
+  const currentBooking = await bookingRepository.findCurrentBooking(
+    barber.userId,
+    new Date(),
+  );
 
   if (currentBooking) {
     return {
-      barberId,
+      barberId: barberProfileId,
       isAvailable: false,
       status: "BUSY",
-      message: "Barber is currently busy",
+      message: "Barber is currently busy with a booking",
     };
   }
 
-  // Step 7: Barber available
   return {
-    barberId,
+    barberId: barberProfileId,
     isAvailable: true,
     status: "AVAILABLE",
     message: "Barber is currently available",
   };
 };
 
-
-export const getBarberAvailability = async (barberId) => {
-  // Step 1: Validate barber ID
-  if (
-    !barberId ||
-    !mongoose.Types.ObjectId.isValid(barberId)
-  ) {
-    const error = new Error("Invalid barber ID");
-    error.statusCode = 400;
-    throw error;
+export const getBarberAvailability = async (barberProfileId) => {
+  if (!mongoose.isValidObjectId(barberProfileId)) {
+    throw createError("Invalid barber profile ID", 400);
   }
 
-  // Step 2: Check barber profile
   const barber =
-    await availabilityRepository.findBarberProfileForAvailability(
-      barberId
+    await barberProfileRepository.findBarberProfileForAvailability(
+      barberProfileId,
     );
+  if (!barber) throw createError("Barber not found", 404);
 
-  if (!barber) {
-    const error = new Error("Barber not found");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  // Step 3: Get schedules
   const schedules =
-    await availabilityRepository.findBarberSchedules(barberId);
+    await barberScheduleRepository.findBarberSchedules(barberProfileId);
 
-  // Step 4: Return barber availability
   return {
     barberId: barber._id,
-    branchId: barber.branchId ?? null,
-    isActive: barber.isActive ?? true,
+    branchId: barber.currentBranchId ?? null,
+    isAvailable: barber.isAvailable ?? false,
     schedules,
     totalSchedules: schedules.length,
   };

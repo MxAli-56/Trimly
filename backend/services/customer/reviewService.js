@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import * as reviewRepository from "../../repository/reviewRepository.js";
-import * as barberRepository from "../../repository/barberRepository.js";
+import * as barberProfileRepository from "../../repository/barberProfileRepository.js";
 
 export const getBarberReviews = async (barberId) => {
   if (!barberId) {
@@ -17,7 +17,7 @@ export const getBarberReviews = async (barberId) => {
 
   // barberId = BarberProfile ID
   const barber =
-    await barberRepository.findBarberById(barberId);
+    await barberProfileRepository.findBarberById(barberId);
 
   if (!barber) {
     const error = new Error("Barber not found");

@@ -1,4 +1,3 @@
-
 import Booking from "../model/bookingModel.js";
 import Status from "../model/statusModel.js";
 import Payment from "../model/paymentModel.js";
@@ -45,7 +44,7 @@ export const findBookingStatuses = async () => {
 
 export const findBookingsByCustomer = async (
   customerId,
-  { page = 1, limit = 10 } = {}
+  { page = 1, limit = 10 } = {},
 ) => {
   const skip = (page - 1) * limit;
 
@@ -76,12 +75,7 @@ export const findBookingsByCustomer = async (
   };
 };
 
-
-
-export const findBookingByIdAndCustomer = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingByIdAndCustomer = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
@@ -94,11 +88,10 @@ export const findBookingByIdAndCustomer = async (
     .lean();
 };
 
-
 export const findUpcomingBookingsByCustomer = async (
   customerId,
   today,
-  { page = 1, limit = 10 } = {}
+  { page = 1, limit = 10 } = {},
 ) => {
   const filter = {
     customerId,
@@ -132,7 +125,7 @@ export const findPastBookingsByCustomer = async (
   customerId,
   today,
   currentTime,
-  { page = 1, limit = 10 } = {}
+  { page = 1, limit = 10 } = {},
 ) => {
   const filter = {
     customerId,
@@ -168,45 +161,29 @@ export const findPastBookingsByCustomer = async (
   };
 };
 
-
-export const findBookingStatusById = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingStatusById = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
     deletedAt: null,
   })
-    .select(
-      "appointmentCode statusId bookingDate startTime endTime"
-    )
+    .select("appointmentCode statusId bookingDate startTime endTime")
     .populate("statusId", "name type description")
     .lean();
 };
 
-
-export const findBookingAppointmentCode = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingAppointmentCode = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
     deletedAt: null,
   })
-    .select(
-      "appointmentCode bookingDate startTime endTime statusId"
-    )
+    .select("appointmentCode bookingDate startTime endTime statusId")
     .populate("statusId", "name type")
     .lean();
 };
 
-
-export const findBookingForCancellation = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingForCancellation = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
@@ -221,7 +198,7 @@ export const updateBookingCancellation = async (
   customerId,
   expectedStatusId,
   cancelledStatusId,
-  reason
+  reason,
 ) => {
   return Booking.findOneAndUpdate(
     {
@@ -236,16 +213,13 @@ export const updateBookingCancellation = async (
         cancelReason: reason,
       },
     },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   )
     .populate("statusId", "name type")
     .lean();
 };
 
-export const findBookingForReschedule = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingForReschedule = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
@@ -259,7 +233,7 @@ export const updateBookingReschedule = async (
   bookingId,
   customerId,
   expectedStatusId,
-  data
+  data,
 ) => {
   return Booking.findOneAndUpdate(
     {
@@ -278,17 +252,13 @@ export const updateBookingReschedule = async (
     {
       new: true,
       runValidators: true,
-    }
+    },
   )
     .populate("statusId", "name type")
     .lean();
 };
 
-
-export const findBookingCancellationDetails = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingCancellationDetails = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
@@ -296,8 +266,8 @@ export const findBookingCancellationDetails = async (
   })
     .select(
       "appointmentCode bookingDate startTime endTime " +
-      "statusId cancelReason totalAmount depositAmount " +
-      "branchId barberId updatedAt"
+        "statusId cancelReason totalAmount depositAmount " +
+        "branchId barberId updatedAt",
     )
     .populate("statusId", "name type description")
     .populate("branchId", "name address")
@@ -305,24 +275,17 @@ export const findBookingCancellationDetails = async (
     .lean();
 };
 
-
-
 import mongoose from "mongoose";
 
 // Existing imports ko preserve karo.
 
-export const findBookingForRefundStatus = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingForRefundStatus = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
     deletedAt: null,
   })
-    .select(
-      "appointmentCode statusId totalAmount depositAmount"
-    )
+    .select("appointmentCode statusId totalAmount depositAmount")
     .populate("statusId", "name type")
     .lean();
 };
@@ -335,5 +298,45 @@ export const findRefundPaymentsByBooking = async (bookingId) => {
   })
     .populate("statusId", "name type")
     .sort({ createdAt: -1 })
+    .lean();
+};
+
+export const findCurrentBooking = async (barberUserId, currentDateTime) => {
+  const statuses = await Status.find({
+    name: { $in: ["CONFIRMED", "IN_PROGRESS"] },
+    type: "BOOKING",
+    deletedAt: null,
+  })
+    .select("_id")
+    .lean();
+
+  const statusIds = statuses.map((s) => s._id);
+
+  const today = new Date(currentDateTime);
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+  const currentTime = `${String(currentDateTime.getHours()).padStart(2, "0")}:${String(currentDateTime.getMinutes()).padStart(2, "0")}`;
+
+  return Booking.findOne({
+    barberId: barberUserId,
+    bookingDate: { $gte: today, $lt: tomorrow },
+    statusId: { $in: statusIds },
+    startTime: { $lte: currentTime },
+    endTime: { $gt: currentTime },
+    deletedAt: null,
+  }).lean();
+};
+
+export const findBookingsForDate = async (barberUserId, dateStart, dateEnd) => {
+  return await Booking.find({
+    barberId: barberUserId,
+    bookingDate: {
+      $gte: dateStart,
+      $lt: dateEnd,
+    },
+    deletedAt: null,
+  })
+    .select("startTime endTime statusId holdExpiresAt")
     .lean();
 };

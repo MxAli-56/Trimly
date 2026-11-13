@@ -6,14 +6,17 @@ import connectDB from "./config/db.js";
 import authRoutes from "./route/authRoute.js";
 import customerRoute from "./route/customerRoute.js";
 import bookingRoute from "./route/bookingRoute.js";
+import barberRoute from "./route/barberRoute.js";
 
 const app = express();
 
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
 app.use("/api/customer", customerRoute);
 app.use("/api/bookings", bookingRoute);
+app.use("/api/barber", barberRoute);
 
 app.use("/auth", authRoutes);
 

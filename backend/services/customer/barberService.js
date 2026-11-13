@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import * as barberRepository from "../../repository/barberRepository.js";
+import * as barberProfileRepository from "../../repository/barberProfileRepository.js";
 
 export const getBranchBarbers = async (branchId, query = {}) => {
   if (!branchId) {
@@ -14,8 +14,7 @@ export const getBranchBarbers = async (branchId, query = {}) => {
     throw error;
   }
 
-  const barbers =
-    await barberRepository.findBarbersByBranchId(branchId);
+  const barbers = await barberProfileRepository.findBarbersByBranchId(branchId);
 
   return barbers;
 };
@@ -34,8 +33,7 @@ export const getBarberById = async (barberId) => {
     throw error;
   }
 
-  const barber =
-    await barberRepository.findBarberById(barberId);
+  const barber = await barberProfileRepository.findBarberById(barberId);
 
   if (!barber) {
     const error = new Error("Barber not found");

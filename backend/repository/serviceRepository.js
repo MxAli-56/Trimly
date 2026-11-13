@@ -125,3 +125,13 @@ export const findServicePriceById = async (serviceId) => {
     )
     .lean();
 };
+
+
+
+export const findActiveService = async (serviceId) => {
+  return await Service.findOne({
+    _id: serviceId,
+    isActive: true,
+    deletedAt: null,
+  }).lean();
+};
