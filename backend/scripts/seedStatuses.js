@@ -44,6 +44,13 @@ const statuses = [
   // REFUND Statuses
   { name: "PENDING", type: "REFUND", description: "Refund initiated" },
   { name: "PROCESSED", type: "REFUND", description: "Refund completed" },
+
+  //Non-working hours booking approval
+  {
+    name: "PENDING_BARBER_APPROVAL",
+    type: "BOOKING",
+    description: "Off-peak booking paid, waiting for barber to accept",
+  },
 ];
 
 const seedStatuses = async () => {

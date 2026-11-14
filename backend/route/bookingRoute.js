@@ -17,6 +17,8 @@ import {
   acceptBarberBooking,
   rejectBarberBooking,
   payBookingDeposit,
+  createOffPeakBookingHandler,
+  respondToOffPeakBookingHandler,
 } from "../controller/bookingController.js";
 
 import authenticate from "../middleware/Auth.js";
@@ -43,8 +45,13 @@ router.get("/:bookingId/calculate-refund", getCalculatedRefund);
 router.get("/:bookingId/cancellation-details", getCustomerCancellationDetails);
 router.get("/:bookingId/refund-status", getCustomerRefundStatus);
 
+// Payment
 router.patch("/:bookingId/accept", acceptBarberBooking);
 router.patch("/:bookingId/reject", rejectBarberBooking);
 router.patch("/:bookingId/pay", payBookingDeposit);
+
+// Non-working hours
+router.post("/off-peak", createOffPeakBookingHandler);
+router.patch("/:bookingId/off-peak-respond", respondToOffPeakBookingHandler);
 
 export default router;

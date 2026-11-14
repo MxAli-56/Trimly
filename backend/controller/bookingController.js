@@ -9,6 +9,7 @@ import { getAppointmentCode } from "../services/booking/appointmentCodeService.j
 import { checkCancellationEligibility } from "../services/booking/cancellationEligibilityService.js";
 import { requestBookingWithTimer } from "../services/booking/requestBookingService.js";
 import * as bookingActionService from "../services/booking/bookingActionService.js";
+import * as offPeakBookingService from "../services/booking/offPeakBookingService.js";
 import {
   getMyBookings,
   getBookingById,
@@ -230,12 +231,10 @@ export const acceptBarberBooking = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Booking is not in PENDING state" });
     if (error.message === "TIMER_EXPIRED")
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Timer expired. Booking is now EXPIRED.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Timer expired. Booking is now EXPIRED.",
+      });
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });
@@ -292,11 +291,67 @@ export const payBookingDeposit = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Booking is not ACCEPTED" });
     if (error.message === "TIMER_EXPIRED")
+      return res.status(400).json({
+        success: false,
+        message: "Timer expired. Booking is now EXPIRED.",
+      });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const createOffPeakBookingHandler = async (req, res) => {
+  try {
+    const customerId = getAuthUserId(req);
+    const result = await offPeakBookingService.createOffPeakBooking(
+      customerId,
+      req.body,
+    );
+    return res
+      .status(201)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (
+      error.message === "BARBER_NOT_FOUND" ||
+      error.message === "INVALID_SERVICES"
+    )
+      return res
+        .status(404)
+        .json({ success: false, message: "Barber or service not found." });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const respondToOffPeakBookingHandler = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    const { action, reason } = req.body; // action: "ACCEPT" or "REJECT"
+
+    const result = await offPeakBookingService.barberRespondToOffPeak(
+      barberUserId,
+      req.params.bookingId,
+      action,
+      reason,
+    );
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not pending approval" });
+    if (error.message === "TOO_LATE_TO_ACT")
       return res
         .status(400)
         .json({
           success: false,
-          message: "Timer expired. Booking is now EXPIRED.",
+          message: "Less than 1 hour left for booking. Auto-cancelled.",
         });
     return res
       .status(500)

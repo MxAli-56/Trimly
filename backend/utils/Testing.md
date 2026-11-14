@@ -139,3 +139,42 @@ URL: http://localhost:5000/api/bookings/<BOOKING_ID>/pay
 Headers: Authorization: Bearer <CUSTOMER_TOKEN>
 
 Expected Output: 200 OK, Status CONFIRMED.
+
+
+
+
+10. Create Off-Peak Booking (Customer)
+
+Method: POST
+
+URL: http://localhost:5000/api/bookings/off-peak
+
+Headers: Authorization: Bearer <CUSTOMER_TOKEN>
+
+Body:
+
+json
+{
+  "barberProfileId": "BARBER_PROFILE_ID",
+  "serviceIds": ["SERVICE_ID"],
+  "date": "2026-11-15",
+  "startTime": "14:00"
+}
+Expected Response: 201 Created. Check DB: Booking status PENDING_BARBER_APPROVAL, Payment collection mein ek record, aur isOffPeakBooking: true.
+
+11. Barber Responds (Accept/Reject)
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/off-peak-respond
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Body (Reject):
+
+json
+{
+  "action": "REJECT",
+  "reason": "Sudden emergency, cannot make it."
+}
+Expected Response: 200 OK. Check DB: Booking status REJECTED, aur Refund collection mein ek record aa gaya for the deposit amount.
