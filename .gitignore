@@ -52,3 +52,4 @@ frontend/android/app/debug.keystore
 # Firebase configuration
 frontend/google-services.json
 frontend/android/app/google-services.json
+eas-archive/

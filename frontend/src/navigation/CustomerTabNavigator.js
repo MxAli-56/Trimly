@@ -1,18 +1,18 @@
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
-import CustomerProfileScreen from '../screens/Customer/CustomerProfileScreen';
-import EditCustomerProfileScreen from '../screens/Customer/EditCustomerProfileScreen';
+import ExploreTabNavigator from './ExploreTabNavigator';
+import CustomerProfileScreen from '../screens/Customer/Profile/CustomerProfileScreen';
+import EditCustomerProfileScreen from '../screens/Customer/Profile/EditCustomerProfileScreen';
+import BookingScreen from '../screens/Customer/Bookings/BookingScreen';
 import Colors from '../constants/Colors';
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createNativeStackNavigator();
 
-// Profile stack: Profile → Edit Profile
 const ProfileStackNavigator = () => {
   return (
     <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
@@ -28,23 +28,14 @@ const ProfileStackNavigator = () => {
   );
 };
 
-// Temporary screens until we build the actual screens
-const PlaceholderScreen = ({ title }) => (
-  <View style={styles.placeholder}>
-    <Text style={styles.placeholderText}>{title}</Text>
-  </View>
-);
-
-const ExploreScreen = () => <PlaceholderScreen title="Explore" />;
-const BookingsScreen = () => <PlaceholderScreen title="My Bookings" />;
-const InboxScreen = () => <PlaceholderScreen title="Inbox" />;
+// Temporary Inbox screen
+const InboxScreen = () => null;
 
 const CustomerTabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-
         tabBarActiveTintColor: Colors.secondary,
         tabBarInactiveTintColor: Colors.textMuted,
 
@@ -62,47 +53,44 @@ const CustomerTabNavigator = () => {
         },
 
         tabBarIcon: ({ color, size }) => {
-          let iconName;
+          const icons = {
+            Explore: 'compass-outline',
+            Bookings: 'calendar-outline',
+            Inbox: 'chatbubble-outline',
+            Profile: 'person-outline',
+          };
 
-          switch (route.name) {
-            case 'Explore':
-              iconName = 'compass-outline';
-              break;
-            case 'Bookings':
-              iconName = 'calendar-outline';
-              break;
-            case 'Inbox':
-              iconName = 'chatbubble-outline';
-              break;
-            case 'Profile':
-              iconName = 'person-outline';
-              break;
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return (
+            <Ionicons
+              name={icons[route.name] || 'ellipse-outline'}
+              size={size}
+              color={color}
+            />
+          );
         },
       })}
     >
-      <Tab.Screen name="Explore" component={ExploreScreen} />
-      <Tab.Screen name="Bookings" component={BookingsScreen} />
-      <Tab.Screen name="Inbox" component={InboxScreen} />
-      <Tab.Screen name="Profile" component={ProfileStackNavigator} />
+      <Tab.Screen
+        name="Explore"
+        component={ExploreTabNavigator}
+      />
+
+      <Tab.Screen
+        name="Bookings"
+        component={BookingScreen}
+      />
+
+      <Tab.Screen
+        name="Inbox"
+        component={InboxScreen}
+      />
+
+      <Tab.Screen
+        name="Profile"
+        component={ProfileStackNavigator}
+      />
     </Tab.Navigator>
   );
 };
-
-const styles = StyleSheet.create({
-  placeholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-  },
-  placeholderText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: Colors.text,
-  },
-});
 
 export default CustomerTabNavigator;

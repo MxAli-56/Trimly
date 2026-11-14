@@ -15,9 +15,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
-import useAuthStore from '../../store/useAuthStore';
-import customerProfileService from '../../services/customerProfileService';
-import Colors from '../../constants/Colors';
+import useAuthStore from '../../../store/useAuthStore';
+import customerProfileService from '../../../services/customerProfileService';
+import Colors from '../../../constants/Colors';
 
 const EditCustomerProfileScreen = ({ navigation }) => {
   const { user, token, updateUser } = useAuthStore();

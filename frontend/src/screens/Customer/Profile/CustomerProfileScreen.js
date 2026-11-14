@@ -17,8 +17,9 @@ import {
   MaterialCommunityIcons,
 } from '@expo/vector-icons';
 
-import useAuthStore from '../../store/useAuthStore';
-import Colors from '../../constants/Colors';
+import useAuthStore from '../../../store/useAuthStore';
+import Colors from '../../../constants/Colors';
+
 
 // Reusable menu row
 const MenuRow = ({
