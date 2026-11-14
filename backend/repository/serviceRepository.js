@@ -126,8 +126,15 @@ export const findServicePriceById = async (serviceId) => {
     .lean();
 };
 
-export const findServicesByIds = async (serviceIds) => {
-  return await Service.find({ _id: { $in: serviceIds }, isActive: true, deletedAt: null });
+export const findServicesByIds = async (serviceIds, branchId) => {
+  return await Service.find({
+    _id: { $in: serviceIds },
+    branchId,
+    isActive: true,
+    deletedAt: null,
+  })
+    .select("branchId name price durationMinutes isActive")
+    .lean();
 };
 
 export const findActiveService = async (serviceId) => {

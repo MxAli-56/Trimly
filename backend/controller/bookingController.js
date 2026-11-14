@@ -62,37 +62,72 @@ const run = async (res, feature, serviceCall, statusCode = 200) => {
   }
 };
 
+
 export const createCustomerBooking = async (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
   try {
     const result = await requestBookingWithTimer(userId, req.body);
+
     return res.status(201).json({
       success: true,
       message: result.message,
       data: result,
     });
   } catch (error) {
-    if (
-      error.message === "BARBER_NOT_FOUND" ||
-      error.message === "INVALID_SERVICES"
-    ) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Barber or service not found." });
+    if (error.message === "BARBER_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Barber not found.",
+      });
     }
+
+    if (error.message === "INVALID_SERVICES") {
+      return res.status(400).json({
+        success: false,
+        message: "One or more selected services are invalid.",
+      });
+    }
+
+    if (
+      [
+        "INVALID_START_TIME",
+        "INVALID_DATE",
+        "INVALID_BOOKING_DURATION",
+      ].includes(error.message)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking details.",
+      });
+    }
+
     if (error.message === "SLOT_NOT_AVAILABLE") {
       return res.status(409).json({
         success: false,
         message: "This slot is already booked or on hold.",
       });
     }
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+
+    if (error.message === "PENDING_STATUS_NOT_FOUND") {
+      console.error("PENDING_STATUS_NOT_FOUND:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Booking status configuration is missing.",
+      });
+    }
+
+    console.error("Create customer booking error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
+
 
 export const getCustomerBookings = (req, res) => {
   const userId = getAuthUserId(req);

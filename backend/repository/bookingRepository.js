@@ -351,20 +351,19 @@ export const createPendingBooking = async (bookingData) => {
   return await Booking.create(bookingData);
 };
 
-export const findConflictingBookings = async (barberUserId, date, startTime, endTime) => {
-  return await Booking.find({
+export const findConflictingBookings = async (
+  barberUserId,
+  date,
+  startTime,
+  endTime
+) => {
+  return Booking.find({
     barberId: barberUserId,
     bookingDate: date,
     deletedAt: null,
-    $or: [
-      { statusId: { $ne: null } }, 
-      { 
-        holdExpiresAt: { $gt: new Date() } 
-      }
-    ],
-    $and: [
-      { startTime: { $lt: endTime } },
-      { endTime: { $gt: startTime } }
-    ]
-  }).populate("statusId").lean();
+    startTime: { $lt: endTime },
+    endTime: { $gt: startTime },
+  })
+    .populate("statusId", "name type")
+    .lean();
 };
