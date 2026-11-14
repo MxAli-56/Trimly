@@ -69,7 +69,7 @@ Expected Response: 200 OK
 
 
 
-7. Create Request
+6. Create Request
 
 Method: POST
 
@@ -101,3 +101,41 @@ json
     "message": "..."
   }
 }
+
+
+
+7. Accept Booking (Barber)
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/accept
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Output: 200 OK, Status ACCEPTED, aur naya holdExpiresAt (3 mins baad ka).
+
+8. Reject Booking (Barber)
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/reject
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Body:
+
+json
+{
+  "reason": "I am fully booked for this time."
+}
+Expected Output: 200 OK, Status REJECTED.
+
+9. Pay Deposit (Customer)
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/pay
+
+Headers: Authorization: Bearer <CUSTOMER_TOKEN>
+
+Expected Output: 200 OK, Status CONFIRMED.

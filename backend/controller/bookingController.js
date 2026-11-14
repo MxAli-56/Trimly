@@ -1,23 +1,14 @@
 import { createBooking } from "../services/booking/createBookingService.js";
-
 import { getUpcomingBookings } from "../services/booking/upcomingBookingService.js";
-
 import { getPastBookings } from "../services/booking/pastBookingService.js";
-
 import { getBookingStatus } from "../services/booking/bookingStatusService.js";
-
 import { calculateRefund } from "../services/booking/calculateRefundService.js";
-
 import { getCancellationDetails } from "../services/booking/cancellationDetailsService.js";
-
 import { getRefundStatus } from "../services/booking/refundStatusService.js";
-
 import { getAppointmentCode } from "../services/booking/appointmentCodeService.js";
-
 import { checkCancellationEligibility } from "../services/booking/cancellationEligibilityService.js";
-
 import { requestBookingWithTimer } from "../services/booking/requestBookingService.js";
-
+import * as bookingActionService from "../services/booking/bookingActionService.js";
 import {
   getMyBookings,
   getBookingById,
@@ -25,12 +16,9 @@ import {
 
 import { cancelBooking } from "../services/booking/cancelBookingService.js";
 
-import {
-  rescheduleBooking,
-} from "../services/booking/rescheduleBookingService.js";
+import { rescheduleBooking } from "../services/booking/rescheduleBookingService.js";
 
-const getAuthUserId = (req) =>
-  req.user?.id ?? req.user?._id ?? req.userId;
+const getAuthUserId = (req) => req.user?.id ?? req.user?._id ?? req.userId;
 
 const unauthorized = (res) =>
   res.status(401).json({
@@ -96,12 +84,10 @@ export const createCustomerBooking = async (req, res) => {
         .json({ success: false, message: "Barber or service not found." });
     }
     if (error.message === "SLOT_NOT_AVAILABLE") {
-      return res
-        .status(409)
-        .json({
-          success: false,
-          message: "This slot is already booked or on hold.",
-        });
+      return res.status(409).json({
+        success: false,
+        message: "This slot is already booked or on hold.",
+      });
     }
     return res
       .status(500)
@@ -114,7 +100,7 @@ export const getCustomerBookings = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerBookings", () =>
-    getMyBookings(userId, req.query)
+    getMyBookings(userId, req.query),
   );
 };
 
@@ -123,7 +109,7 @@ export const getCustomerBookingById = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerBookingById", () =>
-    getBookingById(userId, req.params.bookingId)
+    getBookingById(userId, req.params.bookingId),
   );
 };
 
@@ -132,7 +118,7 @@ export const cancelCustomerBooking = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "cancelCustomerBooking", () =>
-    cancelBooking(userId, req.params.bookingId, req.body)
+    cancelBooking(userId, req.params.bookingId, req.body),
   );
 };
 
@@ -141,7 +127,7 @@ export const rescheduleCustomerBooking = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "rescheduleCustomerBooking", () =>
-    rescheduleBooking(userId, req.params.bookingId, req.body)
+    rescheduleBooking(userId, req.params.bookingId, req.body),
   );
 };
 
@@ -150,7 +136,7 @@ export const getCustomerUpcomingBookings = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerUpcomingBookings", () =>
-    getUpcomingBookings(userId, req.query)
+    getUpcomingBookings(userId, req.query),
   );
 };
 
@@ -159,7 +145,7 @@ export const getCustomerPastBookings = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerPastBookings", () =>
-    getPastBookings(userId, req.query)
+    getPastBookings(userId, req.query),
   );
 };
 
@@ -168,7 +154,7 @@ export const getCustomerBookingStatus = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerBookingStatus", () =>
-    getBookingStatus(userId, req.params.bookingId)
+    getBookingStatus(userId, req.params.bookingId),
   );
 };
 
@@ -178,10 +164,9 @@ export const getCustomerAppointmentCode = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerAppointmentCode", () =>
-    getAppointmentCode(userId, req.params.bookingId)
+    getAppointmentCode(userId, req.params.bookingId),
   );
 };
-
 
 export const getCancellationEligibility = (req, res) => {
   const userId = getAuthUserId(req);
@@ -189,10 +174,7 @@ export const getCancellationEligibility = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "checkCancellationEligibility", () =>
-    checkCancellationEligibility(
-      userId,
-      req.params.bookingId
-    )
+    checkCancellationEligibility(userId, req.params.bookingId),
   );
 };
 
@@ -202,10 +184,9 @@ export const getCalculatedRefund = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "calculateRefund", () =>
-    calculateRefund(userId, req.params.bookingId)
+    calculateRefund(userId, req.params.bookingId),
   );
 };
-
 
 export const getCustomerCancellationDetails = (req, res) => {
   const userId = getAuthUserId(req);
@@ -213,7 +194,7 @@ export const getCustomerCancellationDetails = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCancellationDetails", () =>
-    getCancellationDetails(userId, req.params.bookingId)
+    getCancellationDetails(userId, req.params.bookingId),
   );
 };
 
@@ -223,6 +204,102 @@ export const getCustomerRefundStatus = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getRefundStatus", () =>
-    getRefundStatus(userId, req.params.bookingId)
+    getRefundStatus(userId, req.params.bookingId),
   );
+};
+
+export const acceptBarberBooking = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    if (!barberUserId) return unauthorized(res);
+
+    const result = await bookingActionService.acceptBooking(
+      barberUserId,
+      req.params.bookingId,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not in PENDING state" });
+    if (error.message === "TIMER_EXPIRED")
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Timer expired. Booking is now EXPIRED.",
+        });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const rejectBarberBooking = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    if (!barberUserId) return unauthorized(res);
+
+    const result = await bookingActionService.rejectBooking(
+      barberUserId,
+      req.params.bookingId,
+      req.body.reason,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not in PENDING state" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const payBookingDeposit = async (req, res) => {
+  try {
+    const customerId = getAuthUserId(req);
+    if (!customerId) return unauthorized(res);
+
+    const result = await bookingActionService.payDeposit(
+      customerId,
+      req.params.bookingId,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not ACCEPTED" });
+    if (error.message === "TIMER_EXPIRED")
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Timer expired. Booking is now EXPIRED.",
+        });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
 };

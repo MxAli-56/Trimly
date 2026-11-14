@@ -14,6 +14,9 @@ import {
   getCalculatedRefund,
   getCustomerCancellationDetails,
   getCustomerRefundStatus,
+  acceptBarberBooking,
+  rejectBarberBooking,
+  payBookingDeposit,
 } from "../controller/bookingController.js";
 
 import authenticate from "../middleware/Auth.js";
@@ -39,5 +42,9 @@ router.get("/:bookingId/cancellation-eligibility", getCancellationEligibility);
 router.get("/:bookingId/calculate-refund", getCalculatedRefund);
 router.get("/:bookingId/cancellation-details", getCustomerCancellationDetails);
 router.get("/:bookingId/refund-status", getCustomerRefundStatus);
+
+router.patch("/:bookingId/accept", acceptBarberBooking);
+router.patch("/:bookingId/reject", rejectBarberBooking);
+router.patch("/:bookingId/pay", payBookingDeposit);
 
 export default router;
