@@ -19,6 +19,8 @@ import {
   payBookingDeposit,
   createOffPeakBookingHandler,
   respondToOffPeakBookingHandler,
+  barberRequestReschedule,
+  customerRespondReschedule,
 } from "../controller/bookingController.js";
 
 import authenticate from "../middleware/Auth.js";
@@ -52,5 +54,9 @@ router.patch("/:bookingId/pay", payBookingDeposit);
 // Non-working hours
 router.post("/off-peak", createOffPeakBookingHandler);
 router.patch("/:bookingId/off-peak-respond", respondToOffPeakBookingHandler);
+
+// Reschedule
+router.patch("/:bookingId/barber-reschedule", barberRequestReschedule);
+router.patch("/:bookingId/respond-reschedule", customerRespondReschedule); 
 
 export default router;

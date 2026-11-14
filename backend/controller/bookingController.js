@@ -9,6 +9,7 @@ import { checkCancellationEligibility } from "../services/booking/cancellationEl
 import { requestBookingWithTimer } from "../services/booking/requestBookingService.js";
 import * as bookingActionService from "../services/booking/bookingActionService.js";
 import * as offPeakBookingService from "../services/booking/offPeakBookingService.js";
+import * as barberRescheduleService from "../services/booking/barberRescheduleService.js";
 import {
   getMyBookings,
   getBookingById,
@@ -335,12 +336,72 @@ export const respondToOffPeakBookingHandler = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Booking is not pending approval" });
     if (error.message === "TOO_LATE_TO_ACT")
+      return res.status(400).json({
+        success: false,
+        message: "Less than 1 hour left for booking. Auto-cancelled.",
+      });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const barberRequestReschedule = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    if (!barberUserId) return unauthorized(res);
+    const { newStartTime, newEndTime } = req.body;
+    const result = await barberRescheduleService.barberRescheduleRequest(
+      barberUserId,
+      req.params.bookingId,
+      newStartTime,
+      newEndTime,
+    );
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (error) {
+    if (error.message === "TOO_LATE_TO_RESCHEDULE")
       return res
         .status(400)
         .json({
           success: false,
-          message: "Less than 1 hour left for booking. Auto-cancelled.",
+          message: "Cannot reschedule less than 1 hour before booking.",
         });
+    if (error.message === "NEW_SLOT_NOT_AVAILABLE")
+      return res
+        .status(409)
+        .json({ success: false, message: "New time is already booked." });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Booking state invalid for reschedule.",
+        });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const customerRespondReschedule = async (req, res) => {
+  try {
+    const customerId = getAuthUserId(req);
+    if (!customerId) return unauthorized(res);
+    const result = await barberRescheduleService.customerRespondToReschedule(
+      customerId,
+      req.params.bookingId,
+      req.body.action,
+    );
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (error) {
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "No pending reschedule request." });
+    if (error.message === "RESCHEDULE_REQUEST_EXPIRED")
+      return res
+        .status(400)
+        .json({ success: false, message: "Reschedule request timer expired." });
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });

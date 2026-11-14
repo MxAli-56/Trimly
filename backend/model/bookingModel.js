@@ -49,6 +49,8 @@ const bookingSchema = new mongoose.Schema(
         "Please enter a valid time format (HH:MM)",
       ],
     },
+    rescheduleProposedStartTime: { type: String, default: null },
+    rescheduleProposedEndTime: { type: String, default: null },
     holdExpiresAt: {
       type: Date,
       default: null,

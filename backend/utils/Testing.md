@@ -178,3 +178,41 @@ json
   "reason": "Sudden emergency, cannot make it."
 }
 Expected Response: 200 OK. Check DB: Booking status REJECTED, aur Refund collection mein ek record aa gaya for the deposit amount.
+
+
+
+Reschedule APIs
+
+Test 1: Working Hours Reschedule (Accept)
+
+Customer booking request kare. Barber accept kare (Status: PENDING_CUSTOMER).
+
+Barber PATCH /api/bookings/:id/barber-reschedule hit kare.
+
+Body: {"newStartTime": "15:00", "newEndTime": "15:30"}
+
+DB Status: PENDING_CUSTOMER_RESCHEDULE. Timer: 5 mins.
+
+Customer PATCH /api/bookings/:id/respond-reschedule (action: ACCEPT) hit kare.
+
+DB Status: PENDING_CUSTOMER. Timer: 3 mins. Time update ho jaye.
+
+
+
+Test 2: Off-Peak Reschedule (Reject)
+
+Customer off-peak booking kare aur pay kare (Status: PENDING_BARBER_APPROVAL).
+
+Barber PATCH /barber-reschedule hit kare. DB Status: PENDING_CUSTOMER_RESCHEDULE.
+
+Customer PATCH /respond-reschedule (action: REJECT) hit kare.
+
+DB Status: CANCELLED. Refund collection mein entry ho.
+
+
+
+Test 3: The Sweeper (Cron Job)
+
+Reschedule request bhejo, aur 5 mins ka timer khatam hone do.
+
+Check DB: Status automatically CANCELLED ho jayega.
