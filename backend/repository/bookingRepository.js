@@ -1,6 +1,7 @@
 import Booking from "../model/bookingModel.js";
 import Status from "../model/statusModel.js";
 import Payment from "../model/paymentModel.js";
+
 // Find initial booking status
 export const findBookingStatus = async (name, type) => {
   return Status.findOne({
@@ -90,13 +91,22 @@ export const findBookingByIdAndCustomer = async (bookingId, customerId) => {
 
 export const findUpcomingBookingsByCustomer = async (
   customerId,
-  today,
+  todayDateStr, // e.g., "2026-11-14"
+  currentTimeStr, // e.g., "14:30"
   { page = 1, limit = 10 } = {},
 ) => {
+  const today = new Date(`${todayDateStr}T00:00:00.000Z`);
+
   const filter = {
     customerId,
     deletedAt: null,
-    bookingDate: { $gte: today },
+    $or: [
+      { bookingDate: { $gt: today } }, // Future dates
+      {
+        bookingDate: today, // Aaj ki date hai, toh check time
+        startTime: { $gte: currentTimeStr },
+      },
+    ],
   };
 
   const [bookings, total] = await Promise.all([
@@ -109,7 +119,7 @@ export const findUpcomingBookingsByCustomer = async (
       .limit(limit)
       .lean(),
 
-    Booking.countDocuments(filter),
+    Booking.countDocuments(filter), // Count ab bilkul accurate hoga
   ]);
 
   return {
@@ -274,10 +284,6 @@ export const findBookingCancellationDetails = async (bookingId, customerId) => {
     .populate("barberId", "name profilePhoto")
     .lean();
 };
-
-import mongoose from "mongoose";
-
-// Existing imports ko preserve karo.
 
 export const findBookingForRefundStatus = async (bookingId, customerId) => {
   return Booking.findOne({

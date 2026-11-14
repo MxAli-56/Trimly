@@ -38,7 +38,6 @@ router.get("/:bookingId/status", getCustomerBookingStatus);
 router.get("/:bookingId/appointment-code", getCustomerAppointmentCode);
 
 router.patch("/:bookingId/cancel", cancelCustomerBooking);
-router.patch("/:bookingId/reschedule", rescheduleCustomerBooking);
 
 router.get("/:bookingId/cancellation-eligibility", getCancellationEligibility);
 router.get("/:bookingId/calculate-refund", getCalculatedRefund);

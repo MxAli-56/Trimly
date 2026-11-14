@@ -1,4 +1,4 @@
-import "../config/env.js"; 
+import "../config/env.js";
 import mongoose from "mongoose";
 import { setServers } from "dns";
 import Status from "../model/statusModel.js";
@@ -6,16 +6,26 @@ import Status from "../model/statusModel.js";
 setServers(["8.8.8.8", "1.1.1.1"]);
 
 const statuses = [
-  // BOOKING Statuses
+  // BOOKING Statuses (Your exact flow)
   {
-    name: "PENDING",
+    name: "PENDING_BARBER",
     type: "BOOKING",
-    description: "Waiting for barber to accept",
+    description: "Waiting for barber to accept (2 mins)",
   },
   {
-    name: "ACCEPTED",
+    name: "PENDING_CUSTOMER",
     type: "BOOKING",
-    description: "Barber accepted, waiting for payment",
+    description: "Barber accepted, waiting for payment (3 mins)",
+  },
+  {
+    name: "PENDING_CUSTOMER_RESCHEDULE",
+    type: "BOOKING",
+    description: "Barber proposed a new time, waiting for customer response",
+  },
+  {
+    name: "PENDING_BARBER_APPROVAL",
+    type: "BOOKING",
+    description: "Off-peak booking paid, waiting for barber final approval",
   },
   {
     name: "CONFIRMED",
@@ -34,7 +44,11 @@ const statuses = [
     description: "Cancelled by customer or barber",
   },
   { name: "REJECTED", type: "BOOKING", description: "Rejected by barber" },
-  { name: "EXPIRED", type: "BOOKING", description: "Timer ran out" },
+  {
+    name: "EXPIRED",
+    type: "BOOKING",
+    description: "Timer ran out or auto-cancelled",
+  },
 
   // PAYMENT Statuses
   { name: "PENDING", type: "PAYMENT", description: "Payment initiated" },

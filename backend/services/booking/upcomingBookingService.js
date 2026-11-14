@@ -1,12 +1,7 @@
-
 import mongoose from "mongoose";
-
 import { findUpcomingBookingsByCustomer } from "../../repository/bookingRepository.js";
 
-export const getUpcomingBookings = async (
-  userId,
-  query = {}
-) => {
+export const getUpcomingBookings = async (userId, query = {}) => {
   if (!mongoose.isValidObjectId(userId)) {
     const error = new Error("Invalid customer ID");
     error.statusCode = 400;
@@ -28,54 +23,29 @@ export const getUpcomingBookings = async (
     throw error;
   }
 
-  // Current date/time in Pakistan
   const now = new Date();
 
-  const karachiDate = new Intl.DateTimeFormat(
-    "en-CA",
-    {
-      timeZone: "Asia/Karachi",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }
-  ).format(now);
+  // Get Karachi Date and Time as Strings
+  const karachiDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now); // Output: YYYY-MM-DD
 
-  const today = new Date(
-    `${karachiDate}T00:00:00.000Z`
-  );
+  const currentTime = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Karachi",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(now); // Output: HH:mm
 
   const result = await findUpcomingBookingsByCustomer(
     userId,
-    today,
-    { page, limit }
+    karachiDate,
+    currentTime,
+    { page, limit },
   );
 
-  // Exclude past times on current date
-  const currentTime = new Intl.DateTimeFormat(
-    "en-GB",
-    {
-      timeZone: "Asia/Karachi",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }
-  ).format(now);
-
-  const upcoming = result.bookings.filter((booking) => {
-    const bookingDay = booking.bookingDate
-      .toISOString()
-      .slice(0, 10);
-
-    if (bookingDay > karachiDate) return true;
-
-    return booking.startTime >= currentTime;
-  });
-
-  return {
-    bookings: upcoming,
-    total: upcoming.length,
-    page,
-    limit,
-  };
+  return result;
 };

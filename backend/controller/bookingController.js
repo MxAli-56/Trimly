@@ -1,4 +1,3 @@
-import { createBooking } from "../services/booking/createBookingService.js";
 import { getUpcomingBookings } from "../services/booking/upcomingBookingService.js";
 import { getPastBookings } from "../services/booking/pastBookingService.js";
 import { getBookingStatus } from "../services/booking/bookingStatusService.js";
@@ -16,8 +15,6 @@ import {
 } from "../services/booking/getBookingService.js";
 
 import { cancelBooking } from "../services/booking/cancelBookingService.js";
-
-import { rescheduleBooking } from "../services/booking/rescheduleBookingService.js";
 
 const getAuthUserId = (req) => req.user?.id ?? req.user?._id ?? req.userId;
 
@@ -120,15 +117,6 @@ export const cancelCustomerBooking = (req, res) => {
 
   return run(res, "cancelCustomerBooking", () =>
     cancelBooking(userId, req.params.bookingId, req.body),
-  );
-};
-
-export const rescheduleCustomerBooking = (req, res) => {
-  const userId = getAuthUserId(req);
-  if (!userId) return unauthorized(res);
-
-  return run(res, "rescheduleCustomerBooking", () =>
-    rescheduleBooking(userId, req.params.bookingId, req.body),
   );
 };
 
