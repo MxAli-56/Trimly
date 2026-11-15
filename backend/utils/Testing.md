@@ -216,3 +216,25 @@ Test 3: The Sweeper (Cron Job)
 Reschedule request bhejo, aur 5 mins ka timer khatam hone do.
 
 Check DB: Status automatically CANCELLED ho jayega.
+
+
+
+
+Calendar View: (with token)
+
+GET /api/barber/dashboard/timeline?date=2026-11-15
+
+Response:
+{
+  "success": true,
+  "data": {
+    "date": "2026-11-15",
+    "totalBookings": 4,
+    "timeline": [
+      { "time": "11:00", "status": "CONFIRMED", "customerName": "Hamza Malik", "services": "Skin Fade", "endTime": "11:45" },
+      { "time": "11:45", "status": "AVAILABLE" },
+      { "time": "12:30", "status": "CONFIRMED", "customerName": "Usman Sheikh", "services": "Haircut & Beard", "endTime": "13:15" },
+      { "time": "14:00", "status": "ON_LEAVE" }
+    ]
+  }
+}

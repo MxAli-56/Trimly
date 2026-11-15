@@ -355,7 +355,7 @@ export const findConflictingBookings = async (
   barberUserId,
   date,
   startTime,
-  endTime
+  endTime,
 ) => {
   return Booking.find({
     barberId: barberUserId,
@@ -365,5 +365,36 @@ export const findConflictingBookings = async (
     endTime: { $gt: startTime },
   })
     .populate("statusId", "name type")
+    .lean();
+};
+
+export const findActiveBookingsForDay = async (barberUserId, dateString) => {
+  const dateStart = new Date(`${dateString}T00:00:00.000Z`);
+  const dateEnd = new Date(dateStart.getTime() + 24 * 60 * 60 * 1000);
+
+  // Status list jinki humein timeline mein dikhani hai (rejected/cancelled nahi)
+  const activeStatuses = await Status.find({
+    type: "BOOKING",
+    name: {
+      $in: [
+        "CONFIRMED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "PENDING_BARBER",
+        "PENDING_CUSTOMER",
+        "PENDING_BARBER_APPROVAL",
+      ],
+    },
+  }).select("_id");
+
+  return await Booking.find({
+    barberId: barberUserId,
+    bookingDate: { $gte: dateStart, $lt: dateEnd },
+    statusId: { $in: activeStatuses.map((s) => s._id) },
+    deletedAt: null,
+  })
+    .populate("customerId", "name profilePhoto")
+    .populate("statusId", "name")
+    .sort({ startTime: 1 })
     .lean();
 };

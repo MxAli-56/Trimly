@@ -10,6 +10,7 @@ import { requestBookingWithTimer } from "../services/booking/requestBookingServi
 import * as bookingActionService from "../services/booking/bookingActionService.js";
 import * as offPeakBookingService from "../services/booking/offPeakBookingService.js";
 import * as barberRescheduleService from "../services/booking/barberRescheduleService.js";
+import * as barberDashboardService from "../services/barber/barberDashboardService.js";
 import {
   getMyBookings,
   getBookingById,
@@ -61,7 +62,6 @@ const run = async (res, feature, serviceCall, statusCode = 200) => {
     return handleError(res, error, feature);
   }
 };
-
 
 export const createCustomerBooking = async (req, res) => {
   const userId = getAuthUserId(req);
@@ -127,7 +127,6 @@ export const createCustomerBooking = async (req, res) => {
     });
   }
 };
-
 
 export const getCustomerBookings = (req, res) => {
   const userId = getAuthUserId(req);
@@ -395,23 +394,19 @@ export const barberRequestReschedule = async (req, res) => {
     return res.status(200).json({ success: true, message: result.message });
   } catch (error) {
     if (error.message === "TOO_LATE_TO_RESCHEDULE")
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Cannot reschedule less than 1 hour before booking.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Cannot reschedule less than 1 hour before booking.",
+      });
     if (error.message === "NEW_SLOT_NOT_AVAILABLE")
       return res
         .status(409)
         .json({ success: false, message: "New time is already booked." });
     if (error.message === "INVALID_STATE")
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Booking state invalid for reschedule.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Booking state invalid for reschedule.",
+      });
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });
@@ -440,5 +435,49 @@ export const customerRespondReschedule = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const GetDailyTimeline = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const dateString = req.query.date; // e.g., ?date=2026-11-15
+
+    if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: { code: "INVALID_DATE", message: "Date must be YYYY-MM-DD" },
+        });
+    }
+
+    const timeline = await barberDashboardService.getBarberDailyTimeline(
+      userId,
+      dateString,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: timeline,
+    });
+  } catch (error) {
+    if (error.message === "PROFILE_NOT_FOUND") {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          error: {
+            code: "PROFILE_NOT_FOUND",
+            message: "Barber profile not found",
+          },
+        });
+    }
+    return res
+      .status(500)
+      .json({
+        success: false,
+        error: { code: "SERVER_ERROR", message: "Internal server error" },
+      });
   }
 };
