@@ -21,5 +21,5 @@ router.get('/verify-reset-token/:token', verifyResetToken);
 router.post('/reset-password', validateBody(resetPasswordSchema), ResetPassword);
 router.patch('/update-password', authenticate, validateBody(updatePasswordSchema), updatePassword);
 router.post("/verify-otp", validateBody(verifyOtpSchema), VerifyOtp); 
-router.post("/logout", Logout);
+router.post("/logout", authenticate, Logout);
 export default router;
