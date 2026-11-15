@@ -9,11 +9,11 @@ import SplashScreen from '../screens/Auth/SplashScreen';
 import RegistrationScreen from '../screens/Auth/RegistrationScreen';
 
 import CustomerTabNavigator from './CustomerTabNavigator';
-import BarberProfileScreen from '../screens/Barber/BarberProfileScreen';
 import OwnerProfileScreen from '../screens/Owner/OwnerProfileScreen';
 import VerificationScreen from '../screens/Auth/VerificationScreen';
 
 import useAuthStore from '../store/useAuthStore';
+import BarberTabNavigator from './BarberTabNavigator';
 
 const Stack = createNativeStackNavigator();
 
@@ -72,7 +72,7 @@ const RootNavigator = () => {
 
             <Stack.Screen
               name="Barber"
-              component={BarberProfileScreen}
+              component={BarberTabNavigator}
             />
 
             <Stack.Screen

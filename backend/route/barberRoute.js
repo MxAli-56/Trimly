@@ -5,10 +5,9 @@ import {
   ToggleAvailability,
   AddLeave,
   GetLeaves,
-  DeleteLeave,
-  GetDailyTimeline,
+  DeleteLeave
 } from "../controller/barberController.js";
-
+import {GetDailyTimeline} from "../controller/bookingController.js"
 import authenticate from "../middleware/Auth.js";
 import { requiredRoles } from "../middleware/Access.js";
 import { validateBody } from "../middleware/validateBody.js";

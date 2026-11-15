@@ -66,62 +66,62 @@ const useAuthStore = create((set, get) => ({
       set({ isLoading: false });
     }
   },
-// REGISTER WITH PHONE OTP
-registerWithOtp: async (idToken, userData) => {
-  try {
-    set({ isLoading: true });
+  // REGISTER WITH PHONE OTP
+  registerWithOtp: async (idToken, userData) => {
+    try {
+      set({ isLoading: true });
 
-    // Step 1: Verify Firebase token and create account
-    const { phone, ...registrationData } = userData;
+      // Step 1: Verify Firebase token and create account
+      const { phone, ...registrationData } = userData;
 
- 
 
-const payload = {
-  idToken,
-  ...registrationData,
-};
 
-console.log('OTP payload keys:', Object.keys(payload));
-console.log(
-  'Does payload contain phone?',
-  Object.prototype.hasOwnProperty.call(payload, 'phone')
-);
+      const payload = {
+        idToken,
+        ...registrationData,
+      };
 
-await authService.verifyOtp(payload);
-    // Step 2: Login after successful registration
-    const loginResponse = await authService.login(
-      userData.email,
-      userData.password
-    );
+      console.log('OTP payload keys:', Object.keys(payload));
+      console.log(
+        'Does payload contain phone?',
+        Object.prototype.hasOwnProperty.call(payload, 'phone')
+      );
 
-    const { user, tokens } = loginResponse.data;
-    const accessToken = tokens.accessToken;
+      await authService.verifyOtp(payload);
+      // Step 2: Login after successful registration
+      const loginResponse = await authService.login(
+        userData.email,
+        userData.password
+      );
 
-    // Step 3: Save authentication token
-    await SecureStore.setItemAsync('authToken', accessToken);
+      const { user, tokens } = loginResponse.data;
+      const accessToken = tokens.accessToken;
 
-    // Step 4: Update authentication state
-    set({
-      user,
-      token: accessToken,
-      isAuthenticated: true,
-    });
+      // Step 3: Save authentication token
+      await SecureStore.setItemAsync('authToken', accessToken);
 
-    return { success: true, user };
+      // Step 4: Update authentication state
+      set({
+        user,
+        token: accessToken,
+        isAuthenticated: true,
+      });
 
-  } catch (error) {
-    return {
-      success: false,
-      error:
-        error.response?.data?.error?.message ||
-        error.response?.data?.message ||
-        error.message ||
-        'OTP registration failed.',
-    };
-  } finally {
-    set({ isLoading: false });
-  }
-},
+      return { success: true, user };
+
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error.response?.data?.error?.message ||
+          error.response?.data?.message ||
+          error.message ||
+          'OTP registration failed.',
+      };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
   // RESTORE SESSION
   restoreSession: async () => {
     try {
@@ -211,6 +211,46 @@ await authService.verifyOtp(payload);
         isLoading: false,
         profileLoading: false,
       });
+    }
+  },
+
+  // UPDATE PASSWORD
+  updatePassword: async (passwordData) => {
+    const token = get().token;
+
+    if (!token) {
+      return {
+        success: false,
+        error: 'Authentication token not found.',
+      };
+    }
+
+    // Accept either a plain string or an object like { newPassword }
+    const payload =
+      typeof passwordData === 'string'
+        ? { newPassword: passwordData }
+        : passwordData;
+
+    try {
+      set({ isLoading: true });
+
+      await authService.updatePassword(payload, token);
+
+      return {
+        success: true,
+        message: 'Password updated successfully.',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error.response?.data?.error?.message ||
+          error.response?.data?.message ||
+          error.message ||
+          'Password update failed.',
+      };
+    } finally {
+      set({ isLoading: false });
     }
   },
 }));
