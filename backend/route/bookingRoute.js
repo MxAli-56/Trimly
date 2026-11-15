@@ -19,6 +19,8 @@ import {
   respondToOffPeakBookingHandler,
   barberRequestReschedule,
   customerRespondReschedule,
+  startBarberBooking,
+  completeBarberBooking,
 } from "../controller/bookingController.js";
 
 import authenticate from "../middleware/Auth.js";
@@ -67,5 +69,7 @@ router.patch("/:bookingId/accept", requiredRoles(ROLES.BARBER), acceptBarberBook
 router.patch("/:bookingId/reject", requiredRoles(ROLES.BARBER), validateBody(rejectBookingSchema), rejectBarberBooking);
 router.patch("/:bookingId/off-peak-respond", requiredRoles(ROLES.BARBER), validateBody(offPeakActionSchema), respondToOffPeakBookingHandler);
 router.patch("/:bookingId/barber-reschedule", requiredRoles(ROLES.BARBER), validateBody(barberRescheduleSchema), barberRequestReschedule);
+router.patch("/:bookingId/start", requiredRoles(ROLES.BARBER), startBarberBooking);
+router.patch("/:bookingId/complete", requiredRoles(ROLES.BARBER), completeBarberBooking);
 
 export default router;

@@ -11,6 +11,8 @@ import * as bookingActionService from "../services/booking/bookingActionService.
 import * as offPeakBookingService from "../services/booking/offPeakBookingService.js";
 import * as barberRescheduleService from "../services/booking/barberRescheduleService.js";
 import * as barberDashboardService from "../services/barber/barberDashboardService.js";
+import * as barberOperationsService from "../services/barber/barberOperationsService.js";
+
 import {
   getMyBookings,
   getBookingById,
@@ -444,12 +446,10 @@ export const GetDailyTimeline = async (req, res) => {
     const dateString = req.query.date; // e.g., ?date=2026-11-15
 
     if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: "INVALID_DATE", message: "Date must be YYYY-MM-DD" },
-        });
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_DATE", message: "Date must be YYYY-MM-DD" },
+      });
     }
 
     const timeline = await barberDashboardService.getBarberDailyTimeline(
@@ -463,21 +463,80 @@ export const GetDailyTimeline = async (req, res) => {
     });
   } catch (error) {
     if (error.message === "PROFILE_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "PROFILE_NOT_FOUND",
+          message: "Barber profile not found",
+        },
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
+  }
+};
+
+export const startBarberBooking = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    if (!barberUserId) return unauthorized(res);
+
+    const result = await barberOperationsService.startService(
+      barberUserId,
+      req.params.bookingId,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
       return res
         .status(404)
         .json({
           success: false,
-          error: {
-            code: "PROFILE_NOT_FOUND",
-            message: "Barber profile not found",
-          },
+          message: "Booking not found or doesn't belong to you",
         });
-    }
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not in CONFIRMED state" });
     return res
       .status(500)
-      .json({
-        success: false,
-        error: { code: "SERVER_ERROR", message: "Internal server error" },
-      });
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const completeBarberBooking = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    if (!barberUserId) return unauthorized(res);
+
+    const result = await barberOperationsService.completeService(
+      barberUserId,
+      req.params.bookingId,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Booking not found or doesn't belong to you",
+        });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Booking must be IN_PROGRESS before completing",
+        });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };

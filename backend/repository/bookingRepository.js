@@ -398,3 +398,19 @@ export const findActiveBookingsForDay = async (barberUserId, dateString) => {
     .sort({ startTime: 1 })
     .lean();
 };
+
+export const findBookingByIdAndBarber = async (bookingId, barberUserId) => {
+  return await Booking.findOne({
+    _id: bookingId,
+    barberId: barberUserId,
+    deletedAt: null,
+  }).populate("statusId", "name type");
+};
+
+export const updateBookingStatus = async (bookingId, newStatusId) => {
+  return await Booking.findByIdAndUpdate(
+    bookingId,
+    { $set: { statusId: newStatusId } },
+    { returnDocument: "after" },
+  );
+};

@@ -238,3 +238,51 @@ Response:
     ]
   }
 }
+
+
+
+Test 1: Start Service
+
+Ek booking banao aur barber se accept karwao (CONFIRMED state).
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/start
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected: 200 OK, status: IN_PROGRESS
+
+DB Check: Booking ka statusId IN_PROGRESS ka ObjectId ho.
+
+
+
+
+Test 2: Complete Service (Loyalty Magic)
+
+Wahi booking jo abhi start hui.
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/complete
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected: 200 OK, pointsAwarded: <calculated>
+
+DB Check:
+
+Booking COMPLETED status.
+
+users collection mein customer ka loyaltyPoints barh gaya hoga.
+
+
+
+
+Test 3: Safety Checks (The "Security" Tests)
+
+Booking CONFIRMED hai, par directly /complete hit karo -> 400 error "must be IN_PROGRESS".
+
+Booking barber A ki hai, par barber B ke token se /start hit karo -> 404 "Booking not found" (kyunke barberId match nahi karega).
+
+Dobara /complete hit karo same booking pe -> 400 "must be IN_PROGRESS" (kyunke abhi COMPLETED hai, aur humara check sirf IN_PROGRESS allow karta hai).

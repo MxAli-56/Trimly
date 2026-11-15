@@ -30,16 +30,18 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     cnic: {
-  type: String,
-  required: function() { return this.roles.includes(ROLES.SALON_OWNER); },
-  validate: {
-    validator: function(v) {
-      if (!v && !this.roles.includes(ROLES.SALON_OWNER)) return true;
-      return /^\d{5}-\d{7}-\d$/.test(v); 
+      type: String,
+      required: function () {
+        return this.roles.includes(ROLES.SALON_OWNER);
+      },
+      validate: {
+        validator: function (v) {
+          if (!v && !this.roles.includes(ROLES.SALON_OWNER)) return true;
+          return /^\d{5}-\d{7}-\d$/.test(v);
+        },
+        message: "Invalid CNIC format",
+      },
     },
-    message: 'Invalid CNIC format'
-  }
-},
     password: {
       type: String,
       required: [true, "Password is required"],
@@ -83,6 +85,11 @@ const userSchema = new mongoose.Schema(
           ref: "User",
         },
       ],
+    },
+    loyaltyPoints: {
+      type: Number,
+      default: 0,
+      min: [0, "Loyalty points cannot be negative"],
     },
     deletedAt: {
       type: Date,
