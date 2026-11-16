@@ -1,6 +1,8 @@
 import * as barberService from "../services/barber/barberScheduleService.js";
 import * as barberAvailabilityService from "../services/barber/barberAvailabilityService.js";
 import * as barberDashboardService from "../services/barber/barberDashboardService.js";
+import * as barberProfileService from "../services/barber/barberProfileService.js";
+
 
 export const GetSchedule = async (req, res) => {
   try {
@@ -60,37 +62,29 @@ export const ToggleAvailability = async (req, res) => {
       userId,
       isAvailable,
     );
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Availability updated",
-        data: updatedProfile,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Availability updated",
+      data: updatedProfile,
+    });
   } catch (error) {
     if (error.message === "PROFILE_NOT_FOUND")
-      return res
-        .status(404)
-        .json({
-          success: false,
-          error: { code: error.message, message: "Profile not found" },
-        });
-    if (error.message === "INVALID_INPUT")
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: {
-            code: error.message,
-            message: "isAvailable must be a boolean",
-          },
-        });
-    return res
-      .status(500)
-      .json({
+      return res.status(404).json({
         success: false,
-        error: { code: "SERVER_ERROR", message: "Internal server error" },
+        error: { code: error.message, message: "Profile not found" },
       });
+    if (error.message === "INVALID_INPUT")
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: error.message,
+          message: "isAvailable must be a boolean",
+        },
+      });
+    return res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
   }
 };
 
@@ -103,37 +97,29 @@ export const AddLeave = async (req, res) => {
       userId,
       leaveData,
     );
-    return res
-      .status(201)
-      .json({
-        success: true,
-        message: "Leave added successfully",
-        data: leave,
-      });
+    return res.status(201).json({
+      success: true,
+      message: "Leave added successfully",
+      data: leave,
+    });
   } catch (error) {
     if (error.message === "PROFILE_NOT_FOUND")
-      return res
-        .status(404)
-        .json({
-          success: false,
-          error: { code: error.message, message: "Profile not found" },
-        });
-    if (error.message === "INVALID_TIME_RANGE")
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: {
-            code: error.message,
-            message: "End time must be greater than start time",
-          },
-        });
-    return res
-      .status(500)
-      .json({
+      return res.status(404).json({
         success: false,
-        error: { code: "SERVER_ERROR", message: "Internal server error" },
+        error: { code: error.message, message: "Profile not found" },
       });
+    if (error.message === "INVALID_TIME_RANGE")
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: error.message,
+          message: "End time must be greater than start time",
+        },
+      });
+    return res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
   }
 };
 
@@ -144,18 +130,14 @@ export const GetLeaves = async (req, res) => {
     return res.status(200).json({ success: true, data: leaves });
   } catch (error) {
     if (error.message === "PROFILE_NOT_FOUND")
-      return res
-        .status(404)
-        .json({
-          success: false,
-          error: { code: error.message, message: "Profile not found" },
-        });
-    return res
-      .status(500)
-      .json({
+      return res.status(404).json({
         success: false,
-        error: { code: "SERVER_ERROR", message: "Internal server error" },
+        error: { code: error.message, message: "Profile not found" },
       });
+    return res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
   }
 };
 
@@ -169,25 +151,19 @@ export const DeleteLeave = async (req, res) => {
       .json({ success: true, message: "Leave removed successfully" });
   } catch (error) {
     if (error.message === "PROFILE_NOT_FOUND")
-      return res
-        .status(404)
-        .json({
-          success: false,
-          error: { code: error.message, message: "Profile not found" },
-        });
-    if (error.message === "LEAVE_NOT_FOUND")
-      return res
-        .status(404)
-        .json({
-          success: false,
-          error: { code: error.message, message: "Leave not found" },
-        });
-    return res
-      .status(500)
-      .json({
+      return res.status(404).json({
         success: false,
-        error: { code: "SERVER_ERROR", message: "Internal server error" },
+        error: { code: error.message, message: "Profile not found" },
       });
+    if (error.message === "LEAVE_NOT_FOUND")
+      return res.status(404).json({
+        success: false,
+        error: { code: error.message, message: "Leave not found" },
+      });
+    return res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
   }
 };
 
@@ -243,21 +219,48 @@ export const GetUpcomingBookings = async (req, res) => {
     });
   } catch (error) {
     if (error.message === "INVALID_PAGINATION") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: {
-            code: error.message,
-            message: "Invalid page or limit values",
-          },
-        });
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: error.message,
+          message: "Invalid page or limit values",
+        },
+      });
     }
+    return res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
+  }
+};
+
+export const GetMyProfile = async (req, res) => {
+  try {
+    const profile = await barberProfileService.getMyProfile(req.user.id);
+    return res.status(200).json({ success: true, data: profile });
+  } catch (error) {
+    if (error.message === "PROFILE_NOT_FOUND")
+      return res
+        .status(404)
+        .json({ success: false, message: "Profile not found" });
     return res
       .status(500)
-      .json({
-        success: false,
-        error: { code: "SERVER_ERROR", message: "Internal server error" },
-      });
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const UpdateMyProfile = async (req, res) => {
+  try {
+    const updated = await barberProfileService.updateMyProfile(
+      req.user.id,
+      req.body,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: "Profile updated", data: updated });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };

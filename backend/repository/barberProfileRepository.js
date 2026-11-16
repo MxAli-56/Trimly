@@ -2,7 +2,7 @@ import BarberProfile from "../model/barberProfileModel.js";
 
 export const findBarbersByBranchId = async (branchId) => {
   return await BarberProfile.find({
-    currentBranchId: branchId, 
+    currentBranchId: branchId,
     isAvailable: true,
     deletedAt: null,
   })
@@ -46,10 +46,21 @@ export const findBarberProfile = async (barberProfileId) => {
   }).lean();
 };
 
-export const updateAvailabilityStatus = async (barberProfileId, isAvailable) => {
+export const updateAvailabilityStatus = async (
+  barberProfileId,
+  isAvailable,
+) => {
   return await BarberProfile.findByIdAndUpdate(
     barberProfileId,
     { $set: { isAvailable } },
-    { new: true }
+    { new: true },
   ).select("_id isAvailable");
+};
+
+export const updateBarberProfile = async (barberProfileId, updateData) => {
+  return await BarberProfile.findByIdAndUpdate(
+    barberProfileId,
+    { $set: updateData },
+    { returnDocument: "after", runValidators: true },
+  ).populate("userId", "name email phone profilePhoto");
 };
