@@ -164,3 +164,24 @@ export const getCompletedBookings = async (barberUserId, query = {}) => {
     limit,
   });
 };
+
+export const getTodayAppointments = async (barberUserId) => {
+  const now = new Date();
+  const todayDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+
+  const bookings = await bookingRepository.findTodayBookingsByBarber(
+    barberUserId,
+    todayDate,
+  );
+
+  return {
+    date: todayDate,
+    total: bookings.length,
+    appointments: bookings,
+  };
+};

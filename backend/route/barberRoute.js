@@ -8,7 +8,12 @@ import {
   DeleteLeave,
   GetUpcomingBookings,
   GetDailyTimeline,
+  GetTodayAppointments,   
+  GetCompletedBookings,   
+  GetMyProfile,            
+  UpdateMyProfile            
 } from "../controller/barberController.js";
+
 import authenticate from "../middleware/Auth.js";
 import { requiredRoles } from "../middleware/Access.js";
 import { validateBody, validateParams, validateQuery } from "../middleware/validateBody.js";
@@ -20,6 +25,7 @@ import { toggleAvailabilitySchema } from "../validation/barber/availabilityValid
 import { addLeaveSchema } from "../validation/barber/leaveValidation.js";
 import { timelineQuerySchema, paginationQuerySchema } from "../validation/barber/queryValidation.js";
 import { leaveIdParamSchema } from "../validation/barber/paramValidation.js";
+import { updateProfileSchema } from "../validation/barber/profileValidation.js"; // Profile validation
 
 const router = express.Router();
 
@@ -27,27 +33,29 @@ const router = express.Router();
 router.use(authenticate);
 router.use(requiredRoles(ROLES.BARBER));
 
-// Schedule Routes
+// ==========================================
+// PHASE 1: FOUNDATION (Schedule & Availability)
+// ==========================================
 router.get("/schedule", GetSchedule);
 router.post("/schedule", validateBody(setScheduleSchema), SetSchedule);
-
-// Availability Route
-router.patch(
-  "/availability",
-  validateBody(toggleAvailabilitySchema),
-  ToggleAvailability,
-);
-
-// Leave Routes
+router.patch("/availability", validateBody(toggleAvailabilitySchema), ToggleAvailability);
 router.post("/leaves", validateBody(addLeaveSchema), AddLeave);
 router.get("/leaves", GetLeaves);
 router.delete("/leaves/:leaveId", validateParams(leaveIdParamSchema), DeleteLeave);
 
-// Dashboard / Calendar View Route (Query Validation added)
+// ==========================================
+// PHASE 3: DASHBOARD & OPERATIONS
+// ==========================================
+// 1. Dashboard (Calendar View)
 router.get("/dashboard/timeline", validateQuery(timelineQuerySchema), GetDailyTimeline);
 
-// Upcoming & Completed Bookings (Query Validation added)
+// 2. Appointments Tab
+router.get("/appointments/today", GetTodayAppointments);
 router.get("/bookings/upcoming", validateQuery(paginationQuerySchema), GetUpcomingBookings); 
 router.get("/bookings/completed", validateQuery(paginationQuerySchema), GetCompletedBookings);
+
+// 3. Profile Tab
+router.get("/profile", GetMyProfile);
+router.put("/profile", validateBody(updateProfileSchema), UpdateMyProfile);
 
 export default router;

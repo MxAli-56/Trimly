@@ -484,3 +484,35 @@ export const findCompletedBookingsByBarber = async (
   ]);
   return { bookings, total, page, limit, totalPages: Math.ceil(total / limit) };
 };
+
+export const findTodayBookingsByBarber = async (barberUserId, todayDate) => {
+  const dateStart = new Date(`${todayDate}T00:00:00.000Z`);
+  const dateEnd = new Date(dateStart.getTime() + 24 * 60 * 60 * 1000);
+
+  // Active statuses list
+  const activeStatuses = await Status.find({
+    type: "BOOKING",
+    name: {
+      $in: [
+        "PENDING_BARBER",
+        "PENDING_CUSTOMER",
+        "PENDING_CUSTOMER_RESCHEDULE",
+        "PENDING_BARBER_APPROVAL",
+        "CONFIRMED",
+        "IN_PROGRESS",
+        "COMPLETED",
+      ],
+    },
+  }).select("_id");
+
+  return await Booking.find({
+    barberId: barberUserId,
+    bookingDate: { $gte: dateStart, $lt: dateEnd },
+    statusId: { $in: activeStatuses.map((s) => s._id) },
+    deletedAt: null,
+  })
+    .populate("customerId", "name profilePhoto phone")
+    .populate("statusId", "name")
+    .sort({ startTime: 1 })
+    .lean();
+};

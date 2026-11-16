@@ -247,6 +247,20 @@ export const GetCompletedBookings = async (req, res) => {
   }
 };
 
+export const GetTodayAppointments = async (req, res) => {
+  try {
+    const barberUserId = req.user.id;
+    const result = await barberDashboardService.getTodayAppointments(barberUserId);
+    
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Internal server error" } });
+  }
+};
+
 export const GetMyProfile = async (req, res) => {
   try {
     const profile = await barberProfileService.getMyProfile(req.user.id);

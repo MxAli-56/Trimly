@@ -325,3 +325,109 @@ json
     "totalPages": 1
   }
 }
+
+
+
+A. Appointments Tab
+
+1. Today's Appointments
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/appointments/today
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response:
+
+json
+{
+  "success": true,
+  "data": {
+    "date": "2026-11-16",
+    "total": 2,
+    "appointments": [ { "_id": "...", "customerId": { "name": "..." }, "startTime": "10:00", "statusId": { "name": "CONFIRMED" } } ]
+  }
+}
+
+2. Completed Bookings
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/bookings/completed?page=1&limit=5
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response: (Paginated list of COMPLETED bookings, similar to upcoming).
+
+
+
+B. Profile Tab
+
+3. Get My Profile
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/profile
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response:
+
+json
+{
+  "success": true,
+  "data": {
+    "_id": "barber_profile_id",
+    "userId": { "name": "Ali Barber", "email": "testbarber@trimly.com" },
+    "bio": "Professional barber with modern styling experience",
+    "specialties": ["Haircut", "Beard Trim"],
+    "isAvailable": true,
+    "avgRating": 4.7
+  }
+}
+
+
+4. Update My Profile
+
+Method: PUT
+
+URL: http://localhost:5000/api/barber/profile
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Body (JSON):
+
+json
+{
+  "bio": "I specialize in skin fades and hot towel shaves.",
+  "specialties": ["Skin Fade", "Beard Sculpting", "Hot Towel Shave"]
+}
+Expected Response: 200 OK, message: "Profile updated"
+
+
+
+C. Service Operations 
+
+5. Start Service
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/start
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response: 200 OK, message: "Service started successfully."
+
+
+
+
+6. Complete Service
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/complete
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response: 200 OK, message: "Service completed. Customer earned X loyalty points."
