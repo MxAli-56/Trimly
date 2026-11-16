@@ -72,5 +72,6 @@ router.patch("/:bookingId/off-peak-respond", requiredRoles(ROLES.BARBER), valida
 router.patch("/:bookingId/barber-reschedule", requiredRoles(ROLES.BARBER), validateParams(bookingIdParamSchema), validateBody(barberRescheduleSchema), barberRequestReschedule);
 router.patch("/:bookingId/start", requiredRoles(ROLES.BARBER), validateParams(bookingIdParamSchema), startBarberBooking);
 router.patch("/:bookingId/complete", requiredRoles(ROLES.BARBER), validateParams(bookingIdParamSchema), completeBarberBooking);
+router.patch("/:bookingId/no-show", requiredRoles(ROLES.BARBER), validateParams(bookingIdParamSchema), markBookingNoShow);
 
 export default router;

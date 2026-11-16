@@ -4,6 +4,7 @@ import * as barberProfileRepository from "../../repository/barberProfileReposito
 import * as barberScheduleRepository from "../../repository/barberScheduleRepository.js";
 import * as barberLeaveRepository from "../../repository/barberLeaveRepository.js";
 import * as bookingRepository from "../../repository/bookingRepository.js";
+import { calculateCustomerRiskScore } from "../customer/riskScoreService.js"; // Import Risk Score
 
 export const getBarberDailyTimeline = async (barberUserId, dateString) => {
   const profile =
@@ -42,7 +43,6 @@ export const getBarberDailyTimeline = async (barberUserId, dateString) => {
     dateString,
   );
 
-  // Timeline Generation logic
   const timeline = [];
   const [startHour, startMin] = schedule.startTime.split(":").map(Number);
   const [endHour, endMin] = schedule.endTime.split(":").map(Number);
@@ -53,12 +53,9 @@ export const getBarberDailyTimeline = async (barberUserId, dateString) => {
   while (currentMin < endLimit) {
     const timeStr = `${String(Math.floor(currentMin / 60)).padStart(2, "0")}:${String(currentMin % 60).padStart(2, "0")}`;
 
-    // 1. Check Leave
     const isOnLeave = dayLeaves.some(
       (l) => timeStr >= l.startTime && timeStr < l.endTime,
     );
-
-    // 2. Check Booking
     const booking = bookings.find(
       (b) => timeStr >= b.startTime && timeStr < b.endTime,
     );
@@ -75,15 +72,12 @@ export const getBarberDailyTimeline = async (barberUserId, dateString) => {
         services: booking.services.map((s) => s.name).join(", "),
         endTime: booking.endTime,
       });
-      // Jump the pointer to the end of this booking
       const [bh, bm] = booking.endTime.split(":").map(Number);
       currentMin = bh * 60 + bm;
       continue;
     } else {
       timeline.push({ time: timeStr, status: "AVAILABLE" });
     }
-
-    // Increment by 30 mins (ya jo bhi slot size ho)
     currentMin += 30;
   }
 
@@ -97,9 +91,8 @@ export const getBarberDailyTimeline = async (barberUserId, dateString) => {
 };
 
 export const getBarberUpcomingBookings = async (barberUserId, query = {}) => {
-  if (!mongoose.isValidObjectId(barberUserId)) {
+  if (!mongoose.isValidObjectId(barberUserId))
     throw new Error("INVALID_BARBER_ID");
-  }
 
   const page = Number(query.page ?? 1);
   const limit = Number(query.limit ?? 10);
@@ -114,7 +107,6 @@ export const getBarberUpcomingBookings = async (barberUserId, query = {}) => {
     throw new Error("INVALID_PAGINATION");
   }
 
-  // Sirf active statuses fetch karo
   const activeStatuses = await Status.find({
     type: "BOOKING",
     name: {
@@ -131,7 +123,6 @@ export const getBarberUpcomingBookings = async (barberUserId, query = {}) => {
 
   const statusIds = activeStatuses.map((s) => s._id);
 
-  // Karachi time nikaalo
   const now = new Date();
   const karachiDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Karachi",
@@ -139,7 +130,6 @@ export const getBarberUpcomingBookings = async (barberUserId, query = {}) => {
     month: "2-digit",
     day: "2-digit",
   }).format(now);
-
   const currentTime = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Karachi",
     hour: "2-digit",
@@ -147,13 +137,23 @@ export const getBarberUpcomingBookings = async (barberUserId, query = {}) => {
     hourCycle: "h23",
   }).format(now);
 
-  return await bookingRepository.findUpcomingBookingsByBarber(
+  const result = await bookingRepository.findUpcomingBookingsByBarber(
     barberUserId,
     karachiDate,
     currentTime,
     statusIds,
     { page, limit },
   );
+
+  // Inject Risk Scores into upcoming bookings
+  const bookingsWithRisk = await Promise.all(
+    result.bookings.map(async (b) => {
+      const riskScore = await calculateCustomerRiskScore(b.customerId?._id);
+      return { ...b, riskScore };
+    }),
+  );
+
+  return { ...result, bookings: bookingsWithRisk };
 };
 
 export const getCompletedBookings = async (barberUserId, query = {}) => {
@@ -179,9 +179,17 @@ export const getTodayAppointments = async (barberUserId) => {
     todayDate,
   );
 
+  // Inject Risk Scores into today's appointments
+  const appointmentsWithRisk = await Promise.all(
+    bookings.map(async (b) => {
+      const riskScore = await calculateCustomerRiskScore(b.customerId?._id);
+      return { ...b, riskScore };
+    }),
+  );
+
   return {
     date: todayDate,
     total: bookings.length,
-    appointments: bookings,
+    appointments: appointmentsWithRisk,
   };
 };

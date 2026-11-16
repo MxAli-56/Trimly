@@ -61,3 +61,23 @@ export const completeService = async (barberUserId, bookingId) => {
     message: `Service completed. Customer earned ${pointsEarned} loyalty points.`,
   };
 };
+
+export const markNoShow = async (barberUserId, bookingId) => {
+  const booking = await bookingRepository.findBookingByIdAndBarber(
+    bookingId,
+    barberUserId,
+  );
+  if (!booking) throw new Error("BOOKING_NOT_FOUND");
+
+  // No-show sirf CONFIRMED booking pe ho sakta hai
+  if (booking.statusId.name !== "CONFIRMED") {
+    throw new Error("INVALID_STATE");
+  }
+
+  await bookingRepository.markBookingAsNoShow(bookingId, barberUserId);
+  return {
+    bookingId,
+    status: "NO_SHOW",
+    message: "Booking marked as No-Show.",
+  };
+};

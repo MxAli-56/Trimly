@@ -453,12 +453,10 @@ export const startBarberBooking = async (req, res) => {
       .json({ success: true, message: result.message, data: result });
   } catch (error) {
     if (error.message === "BOOKING_NOT_FOUND")
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Booking not found or doesn't belong to you",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found or doesn't belong to you",
+      });
     if (error.message === "INVALID_STATE")
       return res
         .status(400)
@@ -476,25 +474,47 @@ export const completeBarberBooking = async (req, res) => {
 
     const result = await barberOperationService.completeService(
       barberUserId,
-      req.params.bookingId, 
+      req.params.bookingId,
     );
     return res
       .status(200)
       .json({ success: true, message: result.message, data: result });
   } catch (error) {
     if (error.message === "BOOKING_NOT_FOUND")
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found or doesn't belong to you",
+      });
+    if (error.message === "INVALID_STATE")
+      return res.status(400).json({
+        success: false,
+        message: "Booking must be IN_PROGRESS before completing",
+      });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const markBookingNoShow = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    const result = await barberOperationsService.markNoShow(
+      barberUserId,
+      req.params.bookingId,
+    );
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
       return res
         .status(404)
-        .json({
-          success: false,
-          message: "Booking not found or doesn't belong to you",
-        });
+        .json({ success: false, message: "Booking not found" });
     if (error.message === "INVALID_STATE")
       return res
         .status(400)
         .json({
           success: false,
-          message: "Booking must be IN_PROGRESS before completing",
+          message: "Only CONFIRMED bookings can be marked No-Show",
         });
     return res
       .status(500)

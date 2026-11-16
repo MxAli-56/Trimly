@@ -494,6 +494,7 @@ export const findTodayBookingsByBarber = async (barberUserId, todayDate) => {
     type: "BOOKING",
     name: {
       $in: [
+        "PENDING",
         "PENDING_BARBER",
         "PENDING_CUSTOMER",
         "PENDING_CUSTOMER_RESCHEDULE",
@@ -531,4 +532,16 @@ export const findCompletedBookingById = async (bookingId, customerId) => {
     statusId: completedStatus._id,
     deletedAt: null,
   });
+};
+
+export const markBookingAsNoShow = async (bookingId, barberUserId) => {
+  const noShowStatus = await Status.findOne({
+    name: "NO_SHOW",
+    type: "BOOKING",
+  });
+  return await Booking.findOneAndUpdate(
+    { _id: bookingId, barberId: barberUserId, deletedAt: null },
+    { $set: { statusId: noShowStatus._id } },
+    { returnDocument: "after" },
+  );
 };

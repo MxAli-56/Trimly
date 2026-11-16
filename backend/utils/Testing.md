@@ -488,3 +488,43 @@ URL: http://localhost:5000/api/reviews/barber?page=1&limit=5
 Headers: Authorization: Bearer <BARBER_TOKEN>
 
 Expected: 200 OK with reviews array and stats object.
+
+
+------No Show, Risk------
+
+Test 1: No-Show Flow
+
+Booking banao aur Confirm karwao.
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/no-show
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected: 200 OK. Check DB: statusId NO_SHOW ka ObjectId ho.
+
+
+
+Test 2: Risk Score Generation
+
+Ek customer ka account lo jisne abhi No-Show kiya hai (Test 1).
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/appointments/today
+
+Expected Response: Booking ke andar riskScore field aaye (e.g., "riskScore": 50).
+
+Ab us customer ko seed script se loyaltyPoints (e.g., 400) de do DB mein. Phir wapas API hit karo. Risk Score 50 se ghatega (400 points = 20 discount, Final = 30).
+
+
+Test 3: Late Cancel
+
+Booking banao aisi jo 1 ghante se kam time mein hai.
+
+Customer se /cancel endpoint hit karwao.
+
+DB mein check karo: cancelReason mein "LATE_CANCEL: ..." likha hoga.
+
+Barber appointments/today call karega toh Risk Score automatically barha hua aayega.
