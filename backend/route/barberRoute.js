@@ -6,18 +6,20 @@ import {
   AddLeave,
   GetLeaves,
   DeleteLeave,
-  GetDailyTimeline,
   GetUpcomingBookings,
+  GetDailyTimeline,
 } from "../controller/barberController.js";
 import authenticate from "../middleware/Auth.js";
 import { requiredRoles } from "../middleware/Access.js";
-import { validateBody } from "../middleware/validateBody.js";
+import { validateBody, validateParams, validateQuery } from "../middleware/validateBody.js";
 import { ROLES } from "../config/role.js";
 
 // Validations Import
 import { setScheduleSchema } from "../validation/barber/scheduleValidation.js";
 import { toggleAvailabilitySchema } from "../validation/barber/availabilityValidation.js";
 import { addLeaveSchema } from "../validation/barber/leaveValidation.js";
+import { timelineQuerySchema, paginationQuerySchema } from "../validation/barber/queryValidation.js";
+import { leaveIdParamSchema } from "../validation/barber/paramValidation.js";
 
 const router = express.Router();
 
@@ -39,12 +41,12 @@ router.patch(
 // Leave Routes
 router.post("/leaves", validateBody(addLeaveSchema), AddLeave);
 router.get("/leaves", GetLeaves);
-router.delete("/leaves/:leaveId", DeleteLeave);
+router.delete("/leaves/:leaveId", validateParams(leaveIdParamSchema), DeleteLeave);
 
-// Dashboard / Calendar View Route
-router.get("/dashboard/timeline", GetDailyTimeline);
+// Dashboard / Calendar View Route (Query Validation added)
+router.get("/dashboard/timeline", validateQuery(timelineQuerySchema), GetDailyTimeline);
 
-// Upcoming Bookings
-router.get("/bookings/upcoming", GetUpcomingBookings); 
+// Upcoming Bookings (Query Validation added)
+router.get("/bookings/upcoming", validateQuery(paginationQuerySchema), GetUpcomingBookings); 
 
 export default router;
