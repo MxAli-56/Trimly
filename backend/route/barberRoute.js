@@ -24,7 +24,7 @@ import { setScheduleSchema } from "../validation/barber/scheduleValidation.js";
 import { toggleAvailabilitySchema } from "../validation/barber/availabilityValidation.js";
 import { addLeaveSchema } from "../validation/barber/leaveValidation.js";
 import { timelineQuerySchema, paginationQuerySchema } from "../validation/barber/queryValidation.js";
-import { leaveIdParamSchema } from "../validation/barber/paramValidation.js";
+import { leaveIdParamSchema } from "../validation/barber/paramsValidation.js";
 import { updateProfileSchema } from "../validation/barber/profileValidation.js"; // Profile validation
 
 const router = express.Router();

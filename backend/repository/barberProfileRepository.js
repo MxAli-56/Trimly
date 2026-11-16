@@ -64,3 +64,38 @@ export const updateBarberProfile = async (barberProfileId, updateData) => {
     { returnDocument: "after", runValidators: true },
   ).populate("userId", "name email phone profilePhoto");
 };
+
+export const atomicUpdateBarberRating = async (barberProfileId, newRating) => {
+  return await BarberProfile.findByIdAndUpdate(
+    barberProfileId,
+    [
+      {
+        $set: {
+          ratingCount: { $add: [{ $ifNull: ["$ratingCount", 0] }, 1] },
+          avgRating: {
+            $round: [
+              {
+                $divide: [
+                  {
+                    $add: [
+                      {
+                        $multiply: [
+                          { $ifNull: ["$avgRating", 0] },
+                          { $ifNull: ["$ratingCount", 0] },
+                        ],
+                      },
+                      newRating,
+                    ],
+                  },
+                  { $add: [{ $ifNull: ["$ratingCount", 0] }, 1] },
+                ],
+              },
+              1,
+            ],
+          },
+        },
+      },
+    ],
+    { returnDocument: "after" },
+  );
+};

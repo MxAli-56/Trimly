@@ -431,3 +431,60 @@ URL: http://localhost:5000/api/bookings/<BOOKING_ID>/complete
 Headers: Authorization: Bearer <BARBER_TOKEN>
 
 Expected Response: 200 OK, message: "Service completed. Customer earned X loyalty points."
+
+
+
+
+----- Reviews & Ratings -----
+
+Test 1: Submit a Review (Positive)
+
+Pre-condition: Ek booking banao, barber se accept karwao, phir start karo, phir complete karo (/complete API).
+
+Method: POST
+
+URL: http://localhost:5000/api/reviews
+
+Headers: Authorization: Bearer <CUSTOMER_TOKEN>
+
+Body:
+
+json
+{
+  "bookingId": "YAHAN_COMPLETED_BOOKING_ID",
+  "rating": 5,
+  "comment": "Best skin fade in town!"
+}
+Expected: 201 Created.
+
+DB Check: Review collection mein data aya, aur BarberProfile mein avgRating update hua (e.g., 4.5 -> 4.6) aur ratingCount barha.
+
+Test 2: Security - Duplicate Review
+
+Method: POST
+
+URL: http://localhost:5000/api/reviews
+
+Body: Wahi bookingId jo upar use kiya.
+
+Expected: 409 Conflict -> "You have already reviewed this booking".
+
+Test 3: Security - Invalid Booking
+
+Method: POST
+
+URL: http://localhost:5000/api/reviews
+
+Body: Random bookingId daal do ya aisi booking jo CONFIRMED hai (complete nahi hui).
+
+Expected: 400 Bad Request -> "Booking not found, not completed, or doesn't belong to you".
+
+Test 4: Get Barber Reviews (Positive)
+
+Method: GET
+
+URL: http://localhost:5000/api/reviews/barber?page=1&limit=5
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected: 200 OK with reviews array and stats object.

@@ -516,3 +516,19 @@ export const findTodayBookingsByBarber = async (barberUserId, todayDate) => {
     .sort({ startTime: 1 })
     .lean();
 };
+
+export const findCompletedBookingById = async (bookingId, customerId) => {
+  // Status fetch karo taake ID match ho sake
+  const Status = (await import("../model/statusModel.js")).default;
+  const completedStatus = await Status.findOne({
+    name: "COMPLETED",
+    type: "BOOKING",
+  });
+
+  return await Booking.findOne({
+    _id: bookingId,
+    customerId,
+    statusId: completedStatus._id,
+    deletedAt: null,
+  });
+};
