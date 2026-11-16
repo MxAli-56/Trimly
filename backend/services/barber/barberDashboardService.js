@@ -4,7 +4,7 @@ import * as barberProfileRepository from "../../repository/barberProfileReposito
 import * as barberScheduleRepository from "../../repository/barberScheduleRepository.js";
 import * as barberLeaveRepository from "../../repository/barberLeaveRepository.js";
 import * as bookingRepository from "../../repository/bookingRepository.js";
-import { calculateCustomerRiskScore } from "../customer/riskScoreService.js"; // Import Risk Score
+import { calculateCustomerRiskScore } from "../customer/riskStoreService.js"; 
 
 export const getBarberDailyTimeline = async (barberUserId, dateString) => {
   const profile =

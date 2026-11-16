@@ -21,6 +21,7 @@ import {
   customerRespondReschedule,
   startBarberBooking,
   completeBarberBooking,
+  markBookingNoShow,
 } from "../controller/bookingController.js";
 
 import authenticate from "../middleware/Auth.js";
