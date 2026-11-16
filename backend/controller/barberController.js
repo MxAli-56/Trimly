@@ -3,7 +3,6 @@ import * as barberAvailabilityService from "../services/barber/barberAvailabilit
 import * as barberDashboardService from "../services/barber/barberDashboardService.js";
 import * as barberProfileService from "../services/barber/barberProfileService.js";
 
-
 export const GetSchedule = async (req, res) => {
   try {
     const userId = req.user.id; // Auth middleware se aayega
@@ -231,6 +230,20 @@ export const GetUpcomingBookings = async (req, res) => {
       success: false,
       error: { code: "SERVER_ERROR", message: "Internal server error" },
     });
+  }
+};
+
+export const GetCompletedBookings = async (req, res) => {
+  try {
+    const result = await barberDashboardService.getCompletedBookings(
+      req.user.id,
+      req.query,
+    );
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 

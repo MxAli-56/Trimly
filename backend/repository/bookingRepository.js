@@ -458,3 +458,29 @@ export const findUpcomingBookingsByBarber = async (
     totalPages: Math.ceil(total / limit),
   };
 };
+
+export const findCompletedBookingsByBarber = async (
+  barberUserId,
+  { page = 1, limit = 10 } = {},
+) => {
+  const completedStatus = await Status.findOne({
+    name: "COMPLETED",
+    type: "BOOKING",
+  });
+  const filter = {
+    barberId: barberUserId,
+    statusId: completedStatus._id,
+    deletedAt: null,
+  };
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate("customerId", "name profilePhoto")
+      .sort({ bookingDate: -1, startTime: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Booking.countDocuments(filter),
+  ]);
+  return { bookings, total, page, limit, totalPages: Math.ceil(total / limit) };
+};

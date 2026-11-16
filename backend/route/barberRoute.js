@@ -46,7 +46,8 @@ router.delete("/leaves/:leaveId", validateParams(leaveIdParamSchema), DeleteLeav
 // Dashboard / Calendar View Route (Query Validation added)
 router.get("/dashboard/timeline", validateQuery(timelineQuerySchema), GetDailyTimeline);
 
-// Upcoming Bookings (Query Validation added)
+// Upcoming & Completed Bookings (Query Validation added)
 router.get("/bookings/upcoming", validateQuery(paginationQuerySchema), GetUpcomingBookings); 
+router.get("/bookings/completed", validateQuery(paginationQuerySchema), GetCompletedBookings);
 
 export default router;

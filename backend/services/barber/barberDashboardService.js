@@ -155,3 +155,12 @@ export const getBarberUpcomingBookings = async (barberUserId, query = {}) => {
     { page, limit },
   );
 };
+
+export const getCompletedBookings = async (barberUserId, query = {}) => {
+  const page = Number(query.page ?? 1);
+  const limit = Number(query.limit ?? 10);
+  return await bookingRepository.findCompletedBookingsByBarber(barberUserId, {
+    page,
+    limit,
+  });
+};
