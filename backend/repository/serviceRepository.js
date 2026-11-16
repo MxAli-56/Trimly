@@ -127,7 +127,10 @@ export const findServicePriceById = async (serviceId) => {
 };
 
 export const findServicesByIds = async (serviceIds, branchId) => {
-  return await Service.find({
+  console.log("SERVICE IDs:", serviceIds);
+  console.log("BRANCH ID:", branchId);
+
+  const services = await Service.find({
     _id: { $in: serviceIds },
     branchId,
     isActive: true,
@@ -135,6 +138,10 @@ export const findServicesByIds = async (serviceIds, branchId) => {
   })
     .select("branchId name price durationMinutes isActive")
     .lean();
+
+  console.log("FOUND SERVICES:", services);
+
+  return services;
 };
 
 export const findActiveService = async (serviceId) => {

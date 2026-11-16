@@ -1,16 +1,15 @@
 import BarberProfile from "../model/barberProfileModel.js";
+import mongoose from "mongoose";
 
 export const findBarbersByBranchId = async (branchId) => {
-  return await BarberProfile.find({
-    currentBranchId: branchId, 
-    isAvailable: true,
-    deletedAt: null,
-  })
-    .select(
-      "userId currentBranchId bio specialties isAvailable avgRating ratingCount",
-    )
-    .populate("userId", "name email phone profilePhoto")
-    .sort({ avgRating: -1, createdAt: -1 });
+  const barbers = await BarberProfile.collection
+    .find({
+      branchId: new mongoose.Types.ObjectId(branchId),
+      deletedAt: null,
+    })
+    .toArray();
+
+  return barbers;
 };
 
 export const findBarberById = async (barberId) => {
