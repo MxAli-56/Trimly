@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 
 export const findBarbersByBranchId = async (branchId) => {
   return await BarberProfile.find({
-    currentBranchId: branchId,
+    currentBranchId: branchId, 
     isAvailable: true,
     deletedAt: null,
   })
