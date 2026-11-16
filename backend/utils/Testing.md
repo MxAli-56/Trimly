@@ -286,3 +286,42 @@ Booking CONFIRMED hai, par directly /complete hit karo -> 400 error "must be IN_
 Booking barber A ki hai, par barber B ke token se /start hit karo -> 404 "Booking not found" (kyunke barberId match nahi karega).
 
 Dobara /complete hit karo same booking pe -> 400 "must be IN_PROGRESS" (kyunke abhi COMPLETED hai, aur humara check sirf IN_PROGRESS allow karta hai).
+
+
+Upcoming Bookings:
+
+Method: GET
+URL: http://localhost:5000/api/bar
+ber/bookings/upcoming?page=1&limit=5
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response:
+
+json
+{
+  "success": true,
+  "data": {
+    "bookings": [
+      {
+        "_id": "...",
+        "appointmentCode": "TRM-XXXXXX",
+        "customerId": {
+          "name": "Hamza Malik",
+          "profilePhoto": "...",
+          "phone": "03001234567"
+        },
+        "bookingDate": "2026-11-16T00:00:00.000Z",
+        "startTime": "11:00",
+        "endTime": "11:45",
+        "statusId": {
+          "name": "CONFIRMED"
+        }
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 5,
+    "totalPages": 1
+  }
+}

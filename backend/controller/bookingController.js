@@ -10,8 +10,7 @@ import { requestBookingWithTimer } from "../services/booking/requestBookingServi
 import * as bookingActionService from "../services/booking/bookingActionService.js";
 import * as offPeakBookingService from "../services/booking/offPeakBookingService.js";
 import * as barberRescheduleService from "../services/booking/barberRescheduleService.js";
-import * as barberDashboardService from "../services/barber/barberDashboardService.js";
-import * as barberOperationService from "../services/barber/barberOperationsService.js";
+import * as barberOperationService from "../services/barber/barberOperationService.js";
 
 import {
   getMyBookings,
@@ -440,44 +439,6 @@ export const customerRespondReschedule = async (req, res) => {
   }
 };
 
-export const GetDailyTimeline = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const dateString = req.query.date; // e.g., ?date=2026-11-15
-
-    if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      return res.status(400).json({
-        success: false,
-        error: { code: "INVALID_DATE", message: "Date must be YYYY-MM-DD" },
-      });
-    }
-
-    const timeline = await barberDashboardService.getBarberDailyTimeline(
-      userId,
-      dateString,
-    );
-
-    return res.status(200).json({
-      success: true,
-      data: timeline,
-    });
-  } catch (error) {
-    if (error.message === "PROFILE_NOT_FOUND") {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: "PROFILE_NOT_FOUND",
-          message: "Barber profile not found",
-        },
-      });
-    }
-    return res.status(500).json({
-      success: false,
-      error: { code: "SERVER_ERROR", message: "Internal server error" },
-    });
-  }
-};
-
 export const startBarberBooking = async (req, res) => {
   try {
     const barberUserId = getAuthUserId(req);
@@ -515,7 +476,7 @@ export const completeBarberBooking = async (req, res) => {
 
     const result = await barberOperationService.completeService(
       barberUserId,
-      req.params.bookingId,
+      req.params.bookingId, 
     );
     return res
       .status(200)

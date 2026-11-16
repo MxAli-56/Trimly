@@ -5,9 +5,10 @@ import {
   ToggleAvailability,
   AddLeave,
   GetLeaves,
-  DeleteLeave
+  DeleteLeave,
+  GetDailyTimeline,
+  GetUpcomingBookings,
 } from "../controller/barberController.js";
-import {GetDailyTimeline} from "../controller/bookingController.js"
 import authenticate from "../middleware/Auth.js";
 import { requiredRoles } from "../middleware/Access.js";
 import { validateBody } from "../middleware/validateBody.js";
@@ -42,5 +43,8 @@ router.delete("/leaves/:leaveId", DeleteLeave);
 
 // Dashboard / Calendar View Route
 router.get("/dashboard/timeline", GetDailyTimeline);
+
+// Upcoming Bookings
+router.get("/bookings/upcoming", GetUpcomingBookings); 
 
 export default router;

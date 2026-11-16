@@ -414,3 +414,47 @@ export const updateBookingStatus = async (bookingId, newStatusId) => {
     { returnDocument: "after" },
   );
 };
+
+export const findUpcomingBookingsByBarber = async (
+  barberUserId,
+  todayDateStr, // YYYY-MM-DD
+  currentTimeStr, // HH:mm
+  statusIds,
+  { page = 1, limit = 10 } = {},
+) => {
+  const today = new Date(`${todayDateStr}T00:00:00.000Z`);
+
+  const filter = {
+    barberId: barberUserId,
+    deletedAt: null,
+    statusId: { $in: statusIds }, // Sirf active statuses
+    $or: [
+      { bookingDate: { $gt: today } }, // Future dates
+      {
+        bookingDate: today, // Aaj ki date
+        startTime: { $gte: currentTimeStr }, // Aaj ka future time
+      },
+    ],
+  };
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate("customerId", "name profilePhoto phone")
+      .populate("branchId", "name address")
+      .populate("statusId", "name")
+      .sort({ bookingDate: 1, startTime: 1 }) // recent one
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+
+    Booking.countDocuments(filter),
+  ]);
+
+  return {
+    bookings,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+};

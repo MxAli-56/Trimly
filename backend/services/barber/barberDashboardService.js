@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+import Status from "../../model/statusModel.js";
 import * as barberProfileRepository from "../../repository/barberProfileRepository.js";
 import * as barberScheduleRepository from "../../repository/barberScheduleRepository.js";
 import * as barberLeaveRepository from "../../repository/barberLeaveRepository.js";
@@ -92,4 +94,64 @@ export const getBarberDailyTimeline = async (barberUserId, dateString) => {
     totalBookings: bookings.length,
     timeline,
   };
+};
+
+export const getBarberUpcomingBookings = async (barberUserId, query = {}) => {
+  if (!mongoose.isValidObjectId(barberUserId)) {
+    throw new Error("INVALID_BARBER_ID");
+  }
+
+  const page = Number(query.page ?? 1);
+  const limit = Number(query.limit ?? 10);
+
+  if (
+    !Number.isInteger(page) ||
+    page < 1 ||
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > 100
+  ) {
+    throw new Error("INVALID_PAGINATION");
+  }
+
+  // Sirf active statuses fetch karo
+  const activeStatuses = await Status.find({
+    type: "BOOKING",
+    name: {
+      $in: [
+        "PENDING_BARBER",
+        "PENDING_CUSTOMER",
+        "PENDING_CUSTOMER_RESCHEDULE",
+        "PENDING_BARBER_APPROVAL",
+        "CONFIRMED",
+        "IN_PROGRESS",
+      ],
+    },
+  }).select("_id");
+
+  const statusIds = activeStatuses.map((s) => s._id);
+
+  // Karachi time nikaalo
+  const now = new Date();
+  const karachiDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+
+  const currentTime = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Karachi",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(now);
+
+  return await bookingRepository.findUpcomingBookingsByBarber(
+    barberUserId,
+    karachiDate,
+    currentTime,
+    statusIds,
+    { page, limit },
+  );
 };
