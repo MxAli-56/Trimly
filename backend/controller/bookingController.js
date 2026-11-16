@@ -11,7 +11,7 @@ import * as bookingActionService from "../services/booking/bookingActionService.
 import * as offPeakBookingService from "../services/booking/offPeakBookingService.js";
 import * as barberRescheduleService from "../services/booking/barberRescheduleService.js";
 import * as barberDashboardService from "../services/barber/barberDashboardService.js";
-import * as barberOperationService from "../services/barber/barberOperationService.js";
+import * as barberOperationService from "../services/barber/barberOperationsService.js";
 
 import {
   getMyBookings,
@@ -513,7 +513,7 @@ export const completeBarberBooking = async (req, res) => {
     const barberUserId = getAuthUserId(req);
     if (!barberUserId) return unauthorized(res);
 
-    const result = await barberOperationsService.completeService(
+    const result = await barberOperationService.completeService(
       barberUserId,
       req.params.bookingId,
     );
