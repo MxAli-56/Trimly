@@ -9,6 +9,7 @@ import CustomerProfileScreen from '../screens/Customer/Profile/CustomerProfileSc
 import EditCustomerProfileScreen from '../screens/Customer/Profile/EditCustomerProfileScreen';
 import BookingScreen from '../screens/Customer/Bookings/BookingScreen';
 import Colors from '../constants/Colors';
+import UpdatePasswordScreen from '../screens/Auth/UpdatePasswordScreen';
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createNativeStackNavigator();
@@ -23,6 +24,10 @@ const ProfileStackNavigator = () => {
       <ProfileStack.Screen
         name="EditCustomerProfile"
         component={EditCustomerProfileScreen}
+      />
+      <ProfileStack.Screen
+        name="UpdatePassword"
+        component={UpdatePasswordScreen}
       />
     </ProfileStack.Navigator>
   );

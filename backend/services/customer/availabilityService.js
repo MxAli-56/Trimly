@@ -1,6 +1,8 @@
-
 import mongoose from "mongoose";
-import * as availabilityRepository from "../../repository/customerAvailabilityRepository.js";
+import * as barberProfileRepository from "../../repository/barberProfileRepository.js";
+import * as serviceRepository from "../../repository/serviceRepository.js";
+import * as barberScheduleRepository from "../../repository/barberScheduleRepository.js";
+import * as bookingRepository from "../../repository/bookingRepository.js";
 
 const createError = (message, statusCode = 400) => {
   const error = new Error(message);
@@ -32,7 +34,7 @@ const getKarachiNow = () => {
   }).formatToParts(new Date());
 
   const values = Object.fromEntries(
-    parts.map(({ type, value }) => [type, value])
+    parts.map(({ type, value }) => [type, value]),
   );
 
   return {
@@ -55,17 +57,9 @@ const getDayOfWeek = (dateString) => {
   ][date.getUTCDay()];
 };
 
-// ==========================================
-// Get Barber Availability
-// ==========================================
-
-export const getBarberAvailability = async (
-  barberId,
-  query = {}
-) => {
+export const getBarberAvailability = async (barberId, query = {}) => {
   const { date, serviceId } = query;
 
-  // 1. Validate barber and service IDs
   if (!mongoose.isValidObjectId(barberId)) {
     throw createError("Invalid barber profile ID");
   }
@@ -74,11 +68,7 @@ export const getBarberAvailability = async (
     throw createError("Valid serviceId is required");
   }
 
-  // 2. Validate date
-  if (
-    typeof date !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(date)
-  ) {
+  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw createError("Date must be in YYYY-MM-DD format");
   }
 
@@ -97,9 +87,7 @@ export const getBarberAvailability = async (
     throw createError("Cannot check availability for past dates");
   }
 
-  // 3. Find barber profile
-  const barber =
-    await availabilityRepository.findBarberProfile(barberId);
+  const barber = await barberProfileRepository.findBarberProfile(barberId);
 
   if (!barber) {
     throw createError("Barber not found", 404);
@@ -116,18 +104,15 @@ export const getBarberAvailability = async (
     };
   }
 
-  // 4. Find service
-  const service =
-    await availabilityRepository.findActiveService(serviceId);
+  const service = await serviceRepository.findActiveService(serviceId);
 
   if (!service) {
     throw createError("Service not found", 404);
   }
 
-  if (String(service.branchId) !== String(barber.branchId)) {
-    throw createError(
-      "Service does not belong to barber's salon"
-    );
+  if (String(service.branchId) !== String(barber.currentBranchId)) {
+    // branchId -> currentBranchId
+    throw createError("Service does not belong to barber's salon");
   }
 
   const duration = service.durationMinutes;
@@ -136,16 +121,14 @@ export const getBarberAvailability = async (
     throw createError("Invalid service duration", 500);
   }
 
-  // 5. Get schedule
   const dayOfWeek = getDayOfWeek(date);
+  const schedule = await barberScheduleRepository.findScheduleByDay(
+    barberId,
+    dayOfWeek,
+  );
 
-  const schedule =
-    await availabilityRepository.findScheduleByDay(
-      barberId,
-      dayOfWeek
-    );
-
-  if (!schedule) {
+  if (!schedule || !schedule.isWorkingDay) {
+    // isWorkingDay check
     return {
       barberId,
       date,
@@ -157,7 +140,6 @@ export const getBarberAvailability = async (
     };
   }
 
-  // 6. Working hours
   const workStart = toMinutes(schedule.startTime);
   const workEnd = toMinutes(schedule.endTime);
 
@@ -165,70 +147,42 @@ export const getBarberAvailability = async (
     throw createError("Invalid barber schedule", 500);
   }
 
-  const hasBreak = Boolean(
-    schedule.breakStart && schedule.breakEnd
-  );
-
-  const breakStart = hasBreak
-    ? toMinutes(schedule.breakStart)
-    : null;
-
-  const breakEnd = hasBreak
-    ? toMinutes(schedule.breakEnd)
-    : null;
+  const hasBreak = Boolean(schedule.breakStart && schedule.breakEnd);
+  const breakStart = hasBreak ? toMinutes(schedule.breakStart) : null;
+  const breakEnd = hasBreak ? toMinutes(schedule.breakEnd) : null;
 
   if (
     hasBreak &&
-    (breakStart >= breakEnd ||
-      breakStart < workStart ||
-      breakEnd > workEnd)
+    (breakStart >= breakEnd || breakStart < workStart || breakEnd > workEnd)
   ) {
     throw createError("Invalid barber break schedule", 500);
   }
 
-  // 7. Get bookings for selected date
-  // Assumption: bookingDate stored as UTC calendar date
   const dateStart = selectedDate;
-  const dateEnd = new Date(
-    selectedDate.getTime() + 24 * 60 * 60 * 1000
+  const dateEnd = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
+
+  const bookings = await bookingRepository.findBookingsForDate(
+    barber.userId,
+    dateStart,
+    dateEnd,
   );
 
-  const bookings =
-    await availabilityRepository.findBookingsForDate(
-      barber.userId,
-      dateStart,
-      dateEnd
-    );
-
-  // 8. Generate slots (15-minute interval)
   const availableSlots = [];
 
-  for (
-    let start = workStart;
-    start + duration <= workEnd;
-    start += 15
-  ) {
+  for (let start = workStart; start + duration <= workEnd; start += 15) {
     const end = start + duration;
 
-    // Skip past or already-started slots
     if (date === now.date && start <= now.minutes) {
       continue;
     }
 
-    // Skip break overlap
-    if (
-      hasBreak &&
-      start < breakEnd &&
-      end > breakStart
-    ) {
+    if (hasBreak && start < breakEnd && end > breakStart) {
       continue;
     }
 
-    // Skip existing booking overlap
     const hasConflict = bookings.some((booking) => {
       const bookingStart = toMinutes(booking.startTime);
       const bookingEnd = toMinutes(booking.endTime);
-
       return start < bookingEnd && end > bookingStart;
     });
 
@@ -242,10 +196,9 @@ export const getBarberAvailability = async (
     });
   }
 
-  // 9. Return availability
   return {
     barberId,
-    branchId: barber.branchId,
+    branchId: barber.currentBranchId, // branchId -> currentBranchId
     serviceId,
     serviceName: service.name,
     date,
@@ -256,10 +209,7 @@ export const getBarberAvailability = async (
       endTime: schedule.endTime,
     },
     break: hasBreak
-      ? {
-          startTime: schedule.breakStart,
-          endTime: schedule.breakEnd,
-        }
+      ? { startTime: schedule.breakStart, endTime: schedule.breakEnd }
       : null,
     isAvailable: availableSlots.length > 0,
     totalAvailableSlots: availableSlots.length,

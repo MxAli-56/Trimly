@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -138,7 +137,7 @@ const CustomerProfileScreen = () => {
     security: {
       title: 'Account Security',
       message:
-        'Your account verification status is displayed on your profile. Password management will be available here.',
+        'Your account verification status is displayed on your profile. You can change your password from the Session & Security section below.',
       icon: 'shield-checkmark-outline',
     },
     ai: {
@@ -183,6 +182,10 @@ const CustomerProfileScreen = () => {
 
   const handleLogout = () => {
     setActiveModal('logout');
+  };
+
+  const handleChangePassword = () => {
+    navigation.navigate('UpdatePassword');
   };
 
   const confirmLogout = async () => {
@@ -408,6 +411,17 @@ const CustomerProfileScreen = () => {
 
         {/* Session */}
         <MenuSection title="SESSION & SECURITY">
+          <MenuRow
+            icon="lock-closed-outline"
+            title="Change Password"
+            subtitle="Update your account password"
+            iconColor="#4B6B59"
+            iconBackground="#EDF3EE"
+            onPress={handleChangePassword}
+          />
+
+          <View style={styles.divider} />
+
           <Pressable
             style={styles.menuRow}
             onPress={handleLogout}

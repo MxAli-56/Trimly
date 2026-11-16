@@ -1,7 +1,7 @@
-
 import Booking from "../model/bookingModel.js";
 import Status from "../model/statusModel.js";
 import Payment from "../model/paymentModel.js";
+
 // Find initial booking status
 export const findBookingStatus = async (name, type) => {
   return Status.findOne({
@@ -45,7 +45,7 @@ export const findBookingStatuses = async () => {
 
 export const findBookingsByCustomer = async (
   customerId,
-  { page = 1, limit = 10 } = {}
+  { page = 1, limit = 10 } = {},
 ) => {
   const skip = (page - 1) * limit;
 
@@ -76,12 +76,7 @@ export const findBookingsByCustomer = async (
   };
 };
 
-
-
-export const findBookingByIdAndCustomer = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingByIdAndCustomer = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
@@ -94,16 +89,24 @@ export const findBookingByIdAndCustomer = async (
     .lean();
 };
 
-
 export const findUpcomingBookingsByCustomer = async (
   customerId,
-  today,
-  { page = 1, limit = 10 } = {}
+  todayDateStr, // e.g., "2026-11-14"
+  currentTimeStr, // e.g., "14:30"
+  { page = 1, limit = 10 } = {},
 ) => {
+  const today = new Date(`${todayDateStr}T00:00:00.000Z`);
+
   const filter = {
     customerId,
     deletedAt: null,
-    bookingDate: { $gte: today },
+    $or: [
+      { bookingDate: { $gt: today } }, // Future dates
+      {
+        bookingDate: today, // Aaj ki date hai, toh check time
+        startTime: { $gte: currentTimeStr },
+      },
+    ],
   };
 
   const [bookings, total] = await Promise.all([
@@ -116,7 +119,7 @@ export const findUpcomingBookingsByCustomer = async (
       .limit(limit)
       .lean(),
 
-    Booking.countDocuments(filter),
+    Booking.countDocuments(filter), // Count ab bilkul accurate hoga
   ]);
 
   return {
@@ -132,7 +135,7 @@ export const findPastBookingsByCustomer = async (
   customerId,
   today,
   currentTime,
-  { page = 1, limit = 10 } = {}
+  { page = 1, limit = 10 } = {},
 ) => {
   const filter = {
     customerId,
@@ -168,45 +171,29 @@ export const findPastBookingsByCustomer = async (
   };
 };
 
-
-export const findBookingStatusById = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingStatusById = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
     deletedAt: null,
   })
-    .select(
-      "appointmentCode statusId bookingDate startTime endTime"
-    )
+    .select("appointmentCode statusId bookingDate startTime endTime")
     .populate("statusId", "name type description")
     .lean();
 };
 
-
-export const findBookingAppointmentCode = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingAppointmentCode = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
     deletedAt: null,
   })
-    .select(
-      "appointmentCode bookingDate startTime endTime statusId"
-    )
+    .select("appointmentCode bookingDate startTime endTime statusId")
     .populate("statusId", "name type")
     .lean();
 };
 
-
-export const findBookingForCancellation = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingForCancellation = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
@@ -221,7 +208,7 @@ export const updateBookingCancellation = async (
   customerId,
   expectedStatusId,
   cancelledStatusId,
-  reason
+  reason,
 ) => {
   return Booking.findOneAndUpdate(
     {
@@ -236,16 +223,13 @@ export const updateBookingCancellation = async (
         cancelReason: reason,
       },
     },
-    { new: true, runValidators: true }
+    { new: true, runValidators: true },
   )
     .populate("statusId", "name type")
     .lean();
 };
 
-export const findBookingForReschedule = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingForReschedule = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
@@ -259,7 +243,7 @@ export const updateBookingReschedule = async (
   bookingId,
   customerId,
   expectedStatusId,
-  data
+  data,
 ) => {
   return Booking.findOneAndUpdate(
     {
@@ -278,17 +262,13 @@ export const updateBookingReschedule = async (
     {
       new: true,
       runValidators: true,
-    }
+    },
   )
     .populate("statusId", "name type")
     .lean();
 };
 
-
-export const findBookingCancellationDetails = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingCancellationDetails = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
@@ -296,8 +276,8 @@ export const findBookingCancellationDetails = async (
   })
     .select(
       "appointmentCode bookingDate startTime endTime " +
-      "statusId cancelReason totalAmount depositAmount " +
-      "branchId barberId updatedAt"
+        "statusId cancelReason totalAmount depositAmount " +
+        "branchId barberId updatedAt",
     )
     .populate("statusId", "name type description")
     .populate("branchId", "name address")
@@ -305,24 +285,13 @@ export const findBookingCancellationDetails = async (
     .lean();
 };
 
-
-
-import mongoose from "mongoose";
-
-// Existing imports ko preserve karo.
-
-export const findBookingForRefundStatus = async (
-  bookingId,
-  customerId
-) => {
+export const findBookingForRefundStatus = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
     deletedAt: null,
   })
-    .select(
-      "appointmentCode statusId totalAmount depositAmount"
-    )
+    .select("appointmentCode statusId totalAmount depositAmount")
     .populate("statusId", "name type")
     .lean();
 };
@@ -336,4 +305,112 @@ export const findRefundPaymentsByBooking = async (bookingId) => {
     .populate("statusId", "name type")
     .sort({ createdAt: -1 })
     .lean();
+};
+
+export const findCurrentBooking = async (barberUserId, currentDateTime) => {
+  const statuses = await Status.find({
+    name: { $in: ["CONFIRMED", "IN_PROGRESS"] },
+    type: "BOOKING",
+    deletedAt: null,
+  })
+    .select("_id")
+    .lean();
+
+  const statusIds = statuses.map((s) => s._id);
+
+  const today = new Date(currentDateTime);
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+  const currentTime = `${String(currentDateTime.getHours()).padStart(2, "0")}:${String(currentDateTime.getMinutes()).padStart(2, "0")}`;
+
+  return Booking.findOne({
+    barberId: barberUserId,
+    bookingDate: { $gte: today, $lt: tomorrow },
+    statusId: { $in: statusIds },
+    startTime: { $lte: currentTime },
+    endTime: { $gt: currentTime },
+    deletedAt: null,
+  }).lean();
+};
+
+export const findBookingsForDate = async (barberUserId, dateStart, dateEnd) => {
+  return await Booking.find({
+    barberId: barberUserId,
+    bookingDate: {
+      $gte: dateStart,
+      $lt: dateEnd,
+    },
+    deletedAt: null,
+  })
+    .select("startTime endTime statusId holdExpiresAt")
+    .lean();
+};
+
+export const createPendingBooking = async (bookingData) => {
+  return await Booking.create(bookingData);
+};
+
+export const findConflictingBookings = async (
+  barberUserId,
+  date,
+  startTime,
+  endTime,
+) => {
+  return Booking.find({
+    barberId: barberUserId,
+    bookingDate: date,
+    deletedAt: null,
+    startTime: { $lt: endTime },
+    endTime: { $gt: startTime },
+  })
+    .populate("statusId", "name type")
+    .lean();
+};
+
+export const findActiveBookingsForDay = async (barberUserId, dateString) => {
+  const dateStart = new Date(`${dateString}T00:00:00.000Z`);
+  const dateEnd = new Date(dateStart.getTime() + 24 * 60 * 60 * 1000);
+
+  // Status list jinki humein timeline mein dikhani hai (rejected/cancelled nahi)
+  const activeStatuses = await Status.find({
+    type: "BOOKING",
+    name: {
+      $in: [
+        "CONFIRMED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "PENDING_BARBER",
+        "PENDING_CUSTOMER",
+        "PENDING_BARBER_APPROVAL",
+      ],
+    },
+  }).select("_id");
+
+  return await Booking.find({
+    barberId: barberUserId,
+    bookingDate: { $gte: dateStart, $lt: dateEnd },
+    statusId: { $in: activeStatuses.map((s) => s._id) },
+    deletedAt: null,
+  })
+    .populate("customerId", "name profilePhoto")
+    .populate("statusId", "name")
+    .sort({ startTime: 1 })
+    .lean();
+};
+
+export const findBookingByIdAndBarber = async (bookingId, barberUserId) => {
+  return await Booking.findOne({
+    _id: bookingId,
+    barberId: barberUserId,
+    deletedAt: null,
+  }).populate("statusId", "name type");
+};
+
+export const updateBookingStatus = async (bookingId, newStatusId) => {
+  return await Booking.findByIdAndUpdate(
+    bookingId,
+    { $set: { statusId: newStatusId } },
+    { returnDocument: "after" },
+  );
 };

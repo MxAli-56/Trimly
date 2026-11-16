@@ -1,20 +1,17 @@
-import { createBooking } from "../services/booking/createBookingService.js";
-
 import { getUpcomingBookings } from "../services/booking/upcomingBookingService.js";
-
 import { getPastBookings } from "../services/booking/pastBookingService.js";
-
 import { getBookingStatus } from "../services/booking/bookingStatusService.js";
-
 import { calculateRefund } from "../services/booking/calculateRefundService.js";
-
 import { getCancellationDetails } from "../services/booking/cancellationDetailsService.js";
-
 import { getRefundStatus } from "../services/booking/refundStatusService.js";
-
 import { getAppointmentCode } from "../services/booking/appointmentCodeService.js";
-
 import { checkCancellationEligibility } from "../services/booking/cancellationEligibilityService.js";
+import { requestBookingWithTimer } from "../services/booking/requestBookingService.js";
+import * as bookingActionService from "../services/booking/bookingActionService.js";
+import * as offPeakBookingService from "../services/booking/offPeakBookingService.js";
+import * as barberRescheduleService from "../services/booking/barberRescheduleService.js";
+import * as barberDashboardService from "../services/barber/barberDashboardService.js";
+import * as barberOperationService from "../services/barber/barberOperationService.js";
 
 import {
   getMyBookings,
@@ -23,12 +20,7 @@ import {
 
 import { cancelBooking } from "../services/booking/cancelBookingService.js";
 
-import {
-  rescheduleBooking,
-} from "../services/booking/rescheduleBookingService.js";
-
-const getAuthUserId = (req) =>
-  req.user?.id ?? req.user?._id ?? req.userId;
+const getAuthUserId = (req) => req.user?.id ?? req.user?._id ?? req.userId;
 
 const unauthorized = (res) =>
   res.status(401).json({
@@ -73,16 +65,69 @@ const run = async (res, feature, serviceCall, statusCode = 200) => {
   }
 };
 
-export const createCustomerBooking = (req, res) => {
+export const createCustomerBooking = async (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return unauthorized(res);
 
-  return run(
-    res,
-    "createCustomerBooking",
-    () => createBooking(userId, req.body),
-    201
-  );
+  try {
+    const result = await requestBookingWithTimer(userId, req.body);
+
+    return res.status(201).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    if (error.message === "BARBER_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Barber not found.",
+      });
+    }
+
+    if (error.message === "INVALID_SERVICES") {
+      return res.status(400).json({
+        success: false,
+        message: "One or more selected services are invalid.",
+      });
+    }
+
+    if (
+      [
+        "INVALID_START_TIME",
+        "INVALID_DATE",
+        "INVALID_BOOKING_DURATION",
+      ].includes(error.message)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking details.",
+      });
+    }
+
+    if (error.message === "SLOT_NOT_AVAILABLE") {
+      return res.status(409).json({
+        success: false,
+        message: "This slot is already booked or on hold.",
+      });
+    }
+
+    if (error.message === "PENDING_STATUS_NOT_FOUND") {
+      console.error("PENDING_STATUS_NOT_FOUND:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Booking status configuration is missing.",
+      });
+    }
+
+    console.error("Create customer booking error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 };
 
 export const getCustomerBookings = (req, res) => {
@@ -90,7 +135,7 @@ export const getCustomerBookings = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerBookings", () =>
-    getMyBookings(userId, req.query)
+    getMyBookings(userId, req.query),
   );
 };
 
@@ -99,7 +144,7 @@ export const getCustomerBookingById = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerBookingById", () =>
-    getBookingById(userId, req.params.bookingId)
+    getBookingById(userId, req.params.bookingId),
   );
 };
 
@@ -108,16 +153,7 @@ export const cancelCustomerBooking = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "cancelCustomerBooking", () =>
-    cancelBooking(userId, req.params.bookingId, req.body)
-  );
-};
-
-export const rescheduleCustomerBooking = (req, res) => {
-  const userId = getAuthUserId(req);
-  if (!userId) return unauthorized(res);
-
-  return run(res, "rescheduleCustomerBooking", () =>
-    rescheduleBooking(userId, req.params.bookingId, req.body)
+    cancelBooking(userId, req.params.bookingId, req.body),
   );
 };
 
@@ -126,7 +162,7 @@ export const getCustomerUpcomingBookings = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerUpcomingBookings", () =>
-    getUpcomingBookings(userId, req.query)
+    getUpcomingBookings(userId, req.query),
   );
 };
 
@@ -135,7 +171,7 @@ export const getCustomerPastBookings = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerPastBookings", () =>
-    getPastBookings(userId, req.query)
+    getPastBookings(userId, req.query),
   );
 };
 
@@ -144,7 +180,7 @@ export const getCustomerBookingStatus = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerBookingStatus", () =>
-    getBookingStatus(userId, req.params.bookingId)
+    getBookingStatus(userId, req.params.bookingId),
   );
 };
 
@@ -154,10 +190,9 @@ export const getCustomerAppointmentCode = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCustomerAppointmentCode", () =>
-    getAppointmentCode(userId, req.params.bookingId)
+    getAppointmentCode(userId, req.params.bookingId),
   );
 };
-
 
 export const getCancellationEligibility = (req, res) => {
   const userId = getAuthUserId(req);
@@ -165,10 +200,7 @@ export const getCancellationEligibility = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "checkCancellationEligibility", () =>
-    checkCancellationEligibility(
-      userId,
-      req.params.bookingId
-    )
+    checkCancellationEligibility(userId, req.params.bookingId),
   );
 };
 
@@ -178,10 +210,9 @@ export const getCalculatedRefund = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "calculateRefund", () =>
-    calculateRefund(userId, req.params.bookingId)
+    calculateRefund(userId, req.params.bookingId),
   );
 };
-
 
 export const getCustomerCancellationDetails = (req, res) => {
   const userId = getAuthUserId(req);
@@ -189,7 +220,7 @@ export const getCustomerCancellationDetails = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getCancellationDetails", () =>
-    getCancellationDetails(userId, req.params.bookingId)
+    getCancellationDetails(userId, req.params.bookingId),
   );
 };
 
@@ -199,6 +230,313 @@ export const getCustomerRefundStatus = (req, res) => {
   if (!userId) return unauthorized(res);
 
   return run(res, "getRefundStatus", () =>
-    getRefundStatus(userId, req.params.bookingId)
+    getRefundStatus(userId, req.params.bookingId),
   );
+};
+
+export const acceptBarberBooking = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    if (!barberUserId) return unauthorized(res);
+
+    const result = await bookingActionService.acceptBooking(
+      barberUserId,
+      req.params.bookingId,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not in PENDING state" });
+    if (error.message === "TIMER_EXPIRED")
+      return res.status(400).json({
+        success: false,
+        message: "Timer expired. Booking is now EXPIRED.",
+      });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const rejectBarberBooking = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    if (!barberUserId) return unauthorized(res);
+
+    const result = await bookingActionService.rejectBooking(
+      barberUserId,
+      req.params.bookingId,
+      req.body.reason,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not in PENDING state" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const payBookingDeposit = async (req, res) => {
+  try {
+    const customerId = getAuthUserId(req);
+    if (!customerId) return unauthorized(res);
+
+    const result = await bookingActionService.payDeposit(
+      customerId,
+      req.params.bookingId,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not ACCEPTED" });
+    if (error.message === "TIMER_EXPIRED")
+      return res.status(400).json({
+        success: false,
+        message: "Timer expired. Booking is now EXPIRED.",
+      });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const createOffPeakBookingHandler = async (req, res) => {
+  try {
+    const customerId = getAuthUserId(req);
+    const result = await offPeakBookingService.createOffPeakBooking(
+      customerId,
+      req.body,
+    );
+    return res
+      .status(201)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (
+      error.message === "BARBER_NOT_FOUND" ||
+      error.message === "INVALID_SERVICES"
+    )
+      return res
+        .status(404)
+        .json({ success: false, message: "Barber or service not found." });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const respondToOffPeakBookingHandler = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    const { action, reason } = req.body; // action: "ACCEPT" or "REJECT"
+
+    const result = await offPeakBookingService.barberRespondToOffPeak(
+      barberUserId,
+      req.params.bookingId,
+      action,
+      reason,
+    );
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({ success: false, message: "Booking not found" });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not pending approval" });
+    if (error.message === "TOO_LATE_TO_ACT")
+      return res.status(400).json({
+        success: false,
+        message: "Less than 1 hour left for booking. Auto-cancelled.",
+      });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const barberRequestReschedule = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    if (!barberUserId) return unauthorized(res);
+    const { newStartTime, newEndTime } = req.body;
+    const result = await barberRescheduleService.barberRescheduleRequest(
+      barberUserId,
+      req.params.bookingId,
+      newStartTime,
+      newEndTime,
+    );
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (error) {
+    if (error.message === "TOO_LATE_TO_RESCHEDULE")
+      return res.status(400).json({
+        success: false,
+        message: "Cannot reschedule less than 1 hour before booking.",
+      });
+    if (error.message === "NEW_SLOT_NOT_AVAILABLE")
+      return res
+        .status(409)
+        .json({ success: false, message: "New time is already booked." });
+    if (error.message === "INVALID_STATE")
+      return res.status(400).json({
+        success: false,
+        message: "Booking state invalid for reschedule.",
+      });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const customerRespondReschedule = async (req, res) => {
+  try {
+    const customerId = getAuthUserId(req);
+    if (!customerId) return unauthorized(res);
+    const result = await barberRescheduleService.customerRespondToReschedule(
+      customerId,
+      req.params.bookingId,
+      req.body.action,
+    );
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (error) {
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "No pending reschedule request." });
+    if (error.message === "RESCHEDULE_REQUEST_EXPIRED")
+      return res
+        .status(400)
+        .json({ success: false, message: "Reschedule request timer expired." });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const GetDailyTimeline = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const dateString = req.query.date; // e.g., ?date=2026-11-15
+
+    if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_DATE", message: "Date must be YYYY-MM-DD" },
+      });
+    }
+
+    const timeline = await barberDashboardService.getBarberDailyTimeline(
+      userId,
+      dateString,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: timeline,
+    });
+  } catch (error) {
+    if (error.message === "PROFILE_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "PROFILE_NOT_FOUND",
+          message: "Barber profile not found",
+        },
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      error: { code: "SERVER_ERROR", message: "Internal server error" },
+    });
+  }
+};
+
+export const startBarberBooking = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    if (!barberUserId) return unauthorized(res);
+
+    const result = await barberOperationService.startService(
+      barberUserId,
+      req.params.bookingId,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Booking not found or doesn't belong to you",
+        });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({ success: false, message: "Booking is not in CONFIRMED state" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const completeBarberBooking = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    if (!barberUserId) return unauthorized(res);
+
+    const result = await barberOperationsService.completeService(
+      barberUserId,
+      req.params.bookingId,
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: result.message, data: result });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "Booking not found or doesn't belong to you",
+        });
+    if (error.message === "INVALID_STATE")
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Booking must be IN_PROGRESS before completing",
+        });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
 };

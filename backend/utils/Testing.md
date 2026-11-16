@@ -1,0 +1,288 @@
+1. POST /api/barber/schedule with Body (Bearer Token woh barber ka jo seed script se bana tha):
+
+json:
+{
+  "dayOfWeek": "MONDAY",
+  "startTime": "09:00",
+  "endTime": "18:00",
+  "breakStart": "13:00",
+  "breakEnd": "14:00",
+  "isWorkingDay": true
+}
+
+
+2. Toggle Availability
+
+Method: PATCH
+
+URL: http://localhost:5000/api/barber/availability
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Body (Raw JSON):
+
+json
+{
+  "isAvailable": true
+}
+Expected Response: { success: true, message: "Availability updated", data: { _id: "...", isAvailable: true } }
+
+3. Add a Leave
+
+Method: POST
+
+URL: http://localhost:5000/api/barber/leaves
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Body (Raw JSON):
+
+json
+{
+  "leaveDate": "2026-11-15",
+  "startTime": "14:00",
+  "endTime": "16:00",
+  "reason": "Doctor Appointment"
+}
+Expected Response: 201 Created
+
+4. Get Leaves
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/leaves
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response: 200 OK with array of leaves.
+
+5. Delete Leave
+
+Method: DELETE
+
+URL: http://localhost:5000/api/barber/leaves/<LEAVE_ID>
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response: 200 OK
+
+
+
+
+6. Create Request
+
+Method: POST
+
+URL: http://localhost:5000/api/bookings/request
+
+Headers: Authorization: Bearer <CUSTOMER_TOKEN>
+
+Body:
+
+json
+{
+  "barberProfileId": "YAHAN_BARBER_PROFILE_KI_ID_PASTE_KARO",
+  "serviceIds": ["YAHAN_SERVICE_KI_ID_PASTE_KARO"],
+  "date": "2026-11-15",
+  "startTime": "10:00"
+}
+(Customer token seed script se testcustomer@trimly.com se login karke lo).
+
+Expected Response:
+
+json
+{
+  "success": true,
+  "message": "Booking requested. Barber has 2 minutes to accept.",
+  "data": {
+    "bookingId": "...",
+    "appointmentCode": "TRM-A1B2C3",
+    "holdExpiresAt": "2026-11-15T...",
+    "message": "..."
+  }
+}
+
+
+
+7. Accept Booking (Barber)
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/accept
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Output: 200 OK, Status ACCEPTED, aur naya holdExpiresAt (3 mins baad ka).
+
+8. Reject Booking (Barber)
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/reject
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Body:
+
+json
+{
+  "reason": "I am fully booked for this time."
+}
+Expected Output: 200 OK, Status REJECTED.
+
+9. Pay Deposit (Customer)
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/pay
+
+Headers: Authorization: Bearer <CUSTOMER_TOKEN>
+
+Expected Output: 200 OK, Status CONFIRMED.
+
+
+
+
+10. Create Off-Peak Booking (Customer)
+
+Method: POST
+
+URL: http://localhost:5000/api/bookings/off-peak
+
+Headers: Authorization: Bearer <CUSTOMER_TOKEN>
+
+Body:
+
+json
+{
+  "barberProfileId": "BARBER_PROFILE_ID",
+  "serviceIds": ["SERVICE_ID"],
+  "date": "2026-11-15",
+  "startTime": "14:00"
+}
+Expected Response: 201 Created. Check DB: Booking status PENDING_BARBER_APPROVAL, Payment collection mein ek record, aur isOffPeakBooking: true.
+
+11. Barber Responds (Accept/Reject)
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/off-peak-respond
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Body (Reject):
+
+json
+{
+  "action": "REJECT",
+  "reason": "Sudden emergency, cannot make it."
+}
+Expected Response: 200 OK. Check DB: Booking status REJECTED, aur Refund collection mein ek record aa gaya for the deposit amount.
+
+
+
+Reschedule APIs
+
+Test 1: Working Hours Reschedule (Accept)
+
+Customer booking request kare. Barber accept kare (Status: PENDING_CUSTOMER).
+
+Barber PATCH /api/bookings/:id/barber-reschedule hit kare.
+
+Body: {"newStartTime": "15:00", "newEndTime": "15:30"}
+
+DB Status: PENDING_CUSTOMER_RESCHEDULE. Timer: 5 mins.
+
+Customer PATCH /api/bookings/:id/respond-reschedule (action: ACCEPT) hit kare.
+
+DB Status: PENDING_CUSTOMER. Timer: 3 mins. Time update ho jaye.
+
+
+
+Test 2: Off-Peak Reschedule (Reject)
+
+Customer off-peak booking kare aur pay kare (Status: PENDING_BARBER_APPROVAL).
+
+Barber PATCH /barber-reschedule hit kare. DB Status: PENDING_CUSTOMER_RESCHEDULE.
+
+Customer PATCH /respond-reschedule (action: REJECT) hit kare.
+
+DB Status: CANCELLED. Refund collection mein entry ho.
+
+
+
+Test 3: The Sweeper (Cron Job)
+
+Reschedule request bhejo, aur 5 mins ka timer khatam hone do.
+
+Check DB: Status automatically CANCELLED ho jayega.
+
+
+
+
+Calendar View: (with token)
+
+GET /api/barber/dashboard/timeline?date=2026-11-15
+
+Response:
+{
+  "success": true,
+  "data": {
+    "date": "2026-11-15",
+    "totalBookings": 4,
+    "timeline": [
+      { "time": "11:00", "status": "CONFIRMED", "customerName": "Hamza Malik", "services": "Skin Fade", "endTime": "11:45" },
+      { "time": "11:45", "status": "AVAILABLE" },
+      { "time": "12:30", "status": "CONFIRMED", "customerName": "Usman Sheikh", "services": "Haircut & Beard", "endTime": "13:15" },
+      { "time": "14:00", "status": "ON_LEAVE" }
+    ]
+  }
+}
+
+
+
+Test 1: Start Service
+
+Ek booking banao aur barber se accept karwao (CONFIRMED state).
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/start
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected: 200 OK, status: IN_PROGRESS
+
+DB Check: Booking ka statusId IN_PROGRESS ka ObjectId ho.
+
+
+
+
+Test 2: Complete Service (Loyalty Magic)
+
+Wahi booking jo abhi start hui.
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/complete
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected: 200 OK, pointsAwarded: <calculated>
+
+DB Check:
+
+Booking COMPLETED status.
+
+users collection mein customer ka loyaltyPoints barh gaya hoga.
+
+
+
+
+Test 3: Safety Checks (The "Security" Tests)
+
+Booking CONFIRMED hai, par directly /complete hit karo -> 400 error "must be IN_PROGRESS".
+
+Booking barber A ki hai, par barber B ke token se /start hit karo -> 404 "Booking not found" (kyunke barberId match nahi karega).
+
+Dobara /complete hit karo same booking pe -> 400 "must be IN_PROGRESS" (kyunke abhi COMPLETED hai, aur humara check sirf IN_PROGRESS allow karta hai).

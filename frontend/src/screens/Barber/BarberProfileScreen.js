@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   View,
@@ -17,9 +16,9 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Colors from '../../constants/Colors';
 import useAuthStore from '../../store/useAuthStore';
 
-export default function BarberProfileScreen() {
+export default function BarberProfileScreen({ navigation }) {
   const { user, logout } = useAuthStore();
-
+  console.log('ROUTES:', navigation.getState().routeNames);
   // Barber-specific information, if available from the backend.
   const barber = user?.barberProfile || user?.barber || {};
 
@@ -45,6 +44,11 @@ export default function BarberProfileScreen() {
 
   const showComingSoon = (feature) => {
     Alert.alert(feature, 'This feature will be available soon.');
+  };
+
+  // Navigate to the Update Password screen in the profile stack
+  const handleChangePassword = () => {
+    navigation.navigate('UpdatePassword');
   };
 
   const handleLogout = () => {
@@ -346,7 +350,7 @@ export default function BarberProfileScreen() {
             title="Change Password"
             description="Update your account password"
             color="#EEECE8"
-            onPress={() => showComingSoon('Change Password')}
+            onPress={handleChangePassword}
           />
         </View>
 

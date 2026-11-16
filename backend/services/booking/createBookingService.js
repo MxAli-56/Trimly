@@ -7,10 +7,8 @@ import {
   findOverlappingBookings,
 } from "../../repository/bookingRepository.js";
 
-import {
-  findBarberProfile,
-  findActiveService,
-} from "../../repository/customerAvailabilityRepository.js";
+import * as barberProfileRepository from "../../repository/barberProfileRepository.js";
+import * as serviceRepository from "../../repository/serviceRepository.js";
 
 import { STATUS_TYPES } from "../../config/status.js";
 
@@ -21,14 +19,8 @@ const createError = (message, statusCode = 400) => {
 };
 
 export const createBooking = async (userId, payload = {}) => {
-  const {
-    barberId,
-    serviceId,
-    date,
-    startTime,
-  } = payload;
+  const { barberId, serviceId, date, startTime } = payload;
 
-  // 1. Validate customer and IDs
   if (!mongoose.isValidObjectId(userId)) {
     throw createError("Invalid customer ID", 401);
   }
@@ -48,57 +40,38 @@ export const createBooking = async (userId, payload = {}) => {
     throw createError("Invalid startTime (HH:mm)");
   }
 
-  // 2. Validate available slot
-  const availability = await getBarberAvailability(
-    barberId,
-    { date, serviceId }
+  const availability = await getBarberAvailability(barberId, {
+    date,
+    serviceId,
+  });
+
+  const selectedSlot = (availability.availableSlots ?? []).find(
+    (slot) => slot.startTime === startTime,
   );
 
-  const selectedSlot = (
-    availability.availableSlots ?? []
-  ).find((slot) => slot.startTime === startTime);
-
   if (!selectedSlot) {
-    throw createError(
-      "Selected slot is not available",
-      409
-    );
+    throw createError("Selected slot is not available", 409);
   }
 
-  // 3. Get barber and service
-  const barber = await findBarberProfile(barberId);
-  const service = await findActiveService(serviceId);
+  const barber = await barberProfileRepository.findBarberProfile(barberId);
+  const service = await serviceRepository.findActiveService(serviceId);
 
   if (!barber || !service) {
     throw createError("Barber or service not found", 404);
   }
 
-  if (
-    String(barber.branchId) !== String(service.branchId)
-  ) {
-    throw createError(
-      "Service does not belong to barber's branch"
-    );
+  if (String(barber.currentBranchId) !== String(service.branchId)) {
+    throw createError("Service does not belong to barber's branch");
   }
 
-  // 4. Get booking status
-  const status = await findBookingStatus(
-    "PENDING",
-    STATUS_TYPES.BOOKING
-  );
+  const status = await findBookingStatus("PENDING", STATUS_TYPES.BOOKING);
 
   if (!status) {
-    throw createError(
-      "PENDING booking status not found in database",
-      500
-    );
+    throw createError("PENDING booking status not found in database", 500);
   }
 
-  // 5. Check booking conflicts
   const bookingDate = new Date(`${date}T00:00:00.000Z`);
-  const dateEnd = new Date(
-    bookingDate.getTime() + 86400000
-  );
+  const dateEnd = new Date(bookingDate.getTime() + 86400000);
 
   const conflicts = await findOverlappingBookings({
     barberUserId: barber.userId,
@@ -112,22 +85,16 @@ export const createBooking = async (userId, payload = {}) => {
     throw createError("Slot already booked", 409);
   }
 
-  // 6. Calculate price from database
   const totalAmount = service.price;
-
-  // FYP-1: Deposit/payment not integrated
   const depositAmount = 0;
 
-  // 7. Generate appointment code
-  const appointmentCode =
-    `TRM-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+  const appointmentCode = `TRM-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
 
-  // 8. Save booking
   const booking = await createBookingRecord({
     appointmentCode,
     customerId: userId,
     barberId: barber.userId,
-    branchId: barber.branchId,
+    branchId: barber.currentBranchId, // branchId -> currentBranchId
     statusId: status._id,
     bookingDate,
     startTime,
@@ -159,4 +126,3 @@ export const createBooking = async (userId, payload = {}) => {
     message: "Booking created successfully",
   };
 };
-

@@ -74,10 +74,7 @@ export const findActiveUserById = async (userId) => {
   });
 };
 
-export const clearCustomerProfilePhoto = async (
-  userId,
-  publicId
-) => {
+export const clearCustomerProfilePhoto = async (userId, publicId) => {
   return await User.findOneAndUpdate(
     {
       _id: userId,
@@ -93,6 +90,14 @@ export const clearCustomerProfilePhoto = async (
     {
       new: true,
       runValidators: true,
-    }
+    },
   ).select("name email profilePhoto");
+};
+
+export const incrementLoyaltyPoints = async (userId, points) => {
+  return await User.findByIdAndUpdate(
+    userId,
+    { $inc: { loyaltyPoints: points } },
+    { returnDocument: "after" },
+  );
 };
