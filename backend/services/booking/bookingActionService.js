@@ -1,28 +1,14 @@
 
 import Booking from "../../model/bookingModel.js";
-import Status from "../../model/statusModel.js";
 
-const getStatus = async (name, type = "BOOKING") => {
-  const status = await Status.findOne({
-    name,
-    type,
-  });
+import {
+  getBookingStatusId,
+  expireBookingIfNeeded,
+} from "./bookingTimerService.js";
 
-  if (!status) {
-    throw new Error(`STATUS_NOT_FOUND_${name}`);
-  }
-
-  return status;
-};
-
-// ==========================================
-// ACCEPT BOOKING
-// ==========================================
-
-export const acceptBooking = async (barberUserId, bookingId) => {
+const findBooking = async (filter) => {
   const booking = await Booking.findOne({
-    _id: bookingId,
-    barberId: barberUserId,
+    ...filter,
     deletedAt: null,
   });
 
@@ -30,161 +16,156 @@ export const acceptBooking = async (barberUserId, bookingId) => {
     throw new Error("BOOKING_NOT_FOUND");
   }
 
-  const pendingStatus = await getStatus("PENDING");
+  return booking;
+};
 
-  if (String(booking.statusId) !== String(pendingStatus._id)) {
+export const acceptBooking = async (barberUserId, bookingId) => {
+  const booking = await findBooking({
+    _id: bookingId,
+    barberId: barberUserId,
+  });
+
+  await expireBookingIfNeeded(bookingId);
+
+  const pendingId = await getBookingStatusId("PENDING");
+  const acceptedId = await getBookingStatusId("ACCEPTED");
+
+  if (String(booking.statusId) !== String(pendingId)) {
     throw new Error("INVALID_STATE");
   }
 
-  if (
-    !booking.holdExpiresAt ||
-    new Date(booking.holdExpiresAt) <= new Date()
-  ) {
-    const expiredStatus = await getStatus("EXPIRED");
-
-    await Booking.findByIdAndUpdate(
-      bookingId,
-      {
-        statusId: expiredStatus._id,
-      },
-      {
-        returnDocument: "after",
-      }
-    );
-
-    throw new Error("TIMER_EXPIRED");
-  }
-
-  const acceptedStatus = await getStatus("ACCEPTED");
-
-  // Customer gets 3 minutes to pay deposit
   const newHoldExpiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
-  const updatedBooking = await Booking.findByIdAndUpdate(
-    bookingId,
+  const updatedBooking = await Booking.findOneAndUpdate(
     {
-      statusId: acceptedStatus._id,
-      holdExpiresAt: newHoldExpiresAt,
+      _id: bookingId,
+      barberId: barberUserId,
+      statusId: pendingId,
+      holdExpiresAt: { $gt: new Date() },
+      deletedAt: null,
     },
     {
-      returnDocument: "after",
-    }
+      $set: {
+        statusId: acceptedId,
+        holdExpiresAt: newHoldExpiresAt,
+      },
+    },
+    { returnDocument: "after", runValidators: true }
   );
+
+  if (!updatedBooking) {
+    throw new Error("TIMER_EXPIRED");
+  }
 
   return {
     bookingId: updatedBooking._id,
     status: "ACCEPTED",
-    holdExpiresAt: newHoldExpiresAt,
-    message:
-      "Booking accepted. Customer has 3 minutes to pay the deposit.",
+    holdExpiresAt: updatedBooking.holdExpiresAt,
+    timerSeconds: 180,
+    message: "Booking accepted. Customer has 3 minutes to pay.",
   };
 };
-
-// ==========================================
-// REJECT BOOKING
-// ==========================================
 
 export const rejectBooking = async (
   barberUserId,
   bookingId,
   reason
 ) => {
-  const booking = await Booking.findOne({
+  const booking = await findBooking({
     _id: bookingId,
     barberId: barberUserId,
-    deletedAt: null,
   });
 
-  if (!booking) {
-    throw new Error("BOOKING_NOT_FOUND");
-  }
+  await expireBookingIfNeeded(bookingId);
 
-  const pendingStatus = await getStatus("PENDING");
+  const pendingId = await getBookingStatusId("PENDING");
+  const rejectedId = await getBookingStatusId("REJECTED");
 
-  if (String(booking.statusId) !== String(pendingStatus._id)) {
+  if (String(booking.statusId) !== String(pendingId)) {
     throw new Error("INVALID_STATE");
   }
 
-  const rejectedStatus = await getStatus("REJECTED");
-
-  const updatedBooking = await Booking.findByIdAndUpdate(
-    bookingId,
+  const updatedBooking = await Booking.findOneAndUpdate(
     {
-      statusId: rejectedStatus._id,
-      cancelReason: reason,
+      _id: bookingId,
+      barberId: barberUserId,
+      statusId: pendingId,
+      holdExpiresAt: { $gt: new Date() },
+      deletedAt: null,
     },
     {
-      returnDocument: "after",
-    }
+      $set: {
+        statusId: rejectedId,
+        holdExpiresAt: null,
+        cancelReason: reason || "Rejected by barber",
+      },
+    },
+    { returnDocument: "after", runValidators: true }
   );
+
+  if (!updatedBooking) {
+    throw new Error("TIMER_EXPIRED");
+  }
 
   return {
     bookingId: updatedBooking._id,
     status: "REJECTED",
-    reason,
+    reason: updatedBooking.cancelReason,
     message: "Booking rejected successfully.",
   };
 };
 
-// ==========================================
-// PAY BOOKING DEPOSIT
-// ==========================================
-
 export const payDeposit = async (customerId, bookingId) => {
-  const booking = await Booking.findOne({
-    _id: bookingId,
-    customerId,
-    deletedAt: null,
-  });
-
-  if (!booking) {
-    throw new Error("BOOKING_NOT_FOUND");
+  if (process.env.ENABLE_DEMO_PAYMENTS !== "true") {
+    const error = new Error(
+      "Payment gateway verification is not configured"
+    );
+    error.statusCode = 503;
+    throw error;
   }
 
-  const acceptedStatus = await getStatus("ACCEPTED");
+  const booking = await findBooking({
+    _id: bookingId,
+    customerId,
+  });
 
-  if (String(booking.statusId) !== String(acceptedStatus._id)) {
+  await expireBookingIfNeeded(bookingId);
+
+  const acceptedId = await getBookingStatusId("ACCEPTED");
+  const confirmedId = await getBookingStatusId("CONFIRMED");
+
+  if (String(booking.statusId) !== String(acceptedId)) {
     throw new Error("INVALID_STATE");
   }
 
-  if (
-    !booking.holdExpiresAt ||
-    new Date(booking.holdExpiresAt) <= new Date()
-  ) {
-    const expiredStatus = await getStatus("EXPIRED");
-
-    await Booking.findByIdAndUpdate(
-      bookingId,
-      {
-        statusId: expiredStatus._id,
-      },
-      {
-        returnDocument: "after",
-      }
-    );
-
-    throw new Error("TIMER_EXPIRED");
-  }
-
-  const confirmedStatus = await getStatus("CONFIRMED");
-
-  // Payment confirmation should happen only
-  // after the payment provider verifies the deposit.
-  const updatedBooking = await Booking.findByIdAndUpdate(
-    bookingId,
+  const updatedBooking = await Booking.findOneAndUpdate(
     {
-      statusId: confirmedStatus._id,
-      holdExpiresAt: null,
+      _id: bookingId,
+      customerId,
+      statusId: acceptedId,
+      holdExpiresAt: { $gt: new Date() },
+      deletedAt: null,
     },
     {
-      returnDocument: "after",
-    }
+      $set: {
+        statusId: confirmedId,
+        holdExpiresAt: null,
+      },
+    },
+    { returnDocument: "after", runValidators: true }
   );
+
+  if (!updatedBooking) {
+    throw new Error("TIMER_EXPIRED");
+  }
 
   return {
     bookingId: updatedBooking._id,
     status: "CONFIRMED",
     appointmentCode: updatedBooking.appointmentCode,
-    message: "Deposit paid. Booking confirmed.",
+    totalAmount: updatedBooking.totalAmount,
+    depositAmount: updatedBooking.depositAmount,
+    paymentMode: "DEMO",
+    message: "Demo payment completed. Booking confirmed.",
   };
 };

@@ -65,6 +65,12 @@ const statuses = [
     type: "BOOKING",
     description: "Off-peak booking paid, waiting for barber to accept",
   },
+
+  {
+    name: "NO_SHOW",
+    type: "BOOKING",
+    description: "Customer did not arrive for the appointment",
+  },
 ];
 
 const seedStatuses = async () => {

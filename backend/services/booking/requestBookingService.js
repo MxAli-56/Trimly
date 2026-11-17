@@ -6,7 +6,10 @@ import * as bookingRepository from "../../repository/bookingRepository.js";
 import * as barberProfileRepository from "../../repository/barberProfileRepository.js";
 import * as serviceRepository from "../../repository/serviceRepository.js";
 
-import Status from "../../model/statusModel.js";
+import {
+  getBookingStatusId,
+  expireOverdueBookings,
+} from "./bookingTimerService.js";
 
 export const requestBookingWithTimer = async (customerId, payload = {}) => {
   const { barberProfileId, serviceIds, date, startTime } = payload;
@@ -19,15 +22,12 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     throw new Error("BARBER_NOT_FOUND");
   }
 
-  if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
-    throw new Error("INVALID_SERVICES");
-  }
-
-  if (new Set(serviceIds.map(String)).size !== serviceIds.length) {
-    throw new Error("INVALID_SERVICES");
-  }
-
-  if (!serviceIds.every((id) => mongoose.isValidObjectId(id))) {
+  if (
+    !Array.isArray(serviceIds) ||
+    serviceIds.length === 0 ||
+    new Set(serviceIds.map(String)).size !== serviceIds.length ||
+    !serviceIds.every((id) => mongoose.isValidObjectId(id))
+  ) {
     throw new Error("INVALID_SERVICES");
   }
 
@@ -42,14 +42,11 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     typeof date !== "string" ||
     !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
     !Number.isFinite(Date.parse(`${date}T00:00:00.000Z`)) ||
-    new Date(`${date}T00:00:00.000Z`)
-      .toISOString()
-      .slice(0, 10) !== date
+    new Date(`${date}T00:00:00.000Z`).toISOString().slice(0, 10) !== date
   ) {
     throw new Error("INVALID_DATE");
   }
 
-  // Find barber profile
   const barber =
     await barberProfileRepository.findBarberProfile(barberProfileId);
 
@@ -57,14 +54,12 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     throw new Error("BARBER_NOT_FOUND");
   }
 
-  // FIX: Database uses branchId, not currentBranchId
   const branchId = barber.branchId;
 
-  if (!branchId || !mongoose.isValidObjectId(branchId)) {
+  if (!branchId) {
     throw new Error("BARBER_BRANCH_NOT_FOUND");
   }
 
-  // Fetch active services belonging to the barber's branch
   const services = await serviceRepository.findServicesByIds(
     serviceIds,
     branchId
@@ -97,23 +92,33 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     throw new Error("INVALID_SERVICES");
   }
 
-  // Calculate booking end time
-  const [startHour, startMin] = startTime.split(":").map(Number);
+  const [hour, minute] = startTime.split(":").map(Number);
+  const endMinutes = hour * 60 + minute + totalDuration;
 
-  const endTotalMin =
-    startHour * 60 + startMin + totalDuration;
-
-  if (endTotalMin > 24 * 60) {
+  if (endMinutes >= 1440) {
     throw new Error("INVALID_BOOKING_DURATION");
   }
 
   const endTime =
-    `${String(Math.floor(endTotalMin / 60)).padStart(2, "0")}:` +
-    `${String(endTotalMin % 60).padStart(2, "0")}`;
+    `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:` +
+    `${String(endMinutes % 60).padStart(2, "0")}`;
 
   const bookingDate = new Date(`${date}T00:00:00.000Z`);
 
-  // Check existing booking conflicts
+  // Reject appointment times that have already passed.
+  const appointmentTimestamp =
+    Date.parse(`${date}T${startTime}:00+05:00`);
+
+  if (
+    !Number.isFinite(appointmentTimestamp) ||
+    appointmentTimestamp <= Date.now()
+  ) {
+    throw new Error("INVALID_DATE");
+  }
+
+  // Mark old pending/accepted bookings as expired.
+  await expireOverdueBookings();
+
   const conflicts = await bookingRepository.findConflictingBookings(
     barber.userId,
     bookingDate,
@@ -130,12 +135,11 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
       return true;
     }
 
-    if (
-      statusName === "PENDING" &&
-      booking.holdExpiresAt &&
-      new Date(booking.holdExpiresAt) > new Date()
-    ) {
-      return true;
+    if (["PENDING", "ACCEPTED"].includes(statusName)) {
+      return (
+        booking.holdExpiresAt &&
+        new Date(booking.holdExpiresAt) > new Date()
+      );
     }
 
     return false;
@@ -145,31 +149,21 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     throw new Error("SLOT_NOT_AVAILABLE");
   }
 
-  // Get pending booking status
-  const pendingStatus = await Status.findOne({
-    name: "PENDING",
-    type: "BOOKING",
-  });
+  const pendingStatusId = await getBookingStatusId("PENDING");
 
-  if (!pendingStatus) {
-    throw new Error("PENDING_STATUS_NOT_FOUND");
-  }
-
-  // Barber has 2 minutes to accept
   const holdExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
+
+  const depositAmount = Math.round(totalAmount * 0.3 * 100) / 100;
 
   const appointmentCode =
     `TRM-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
 
-  const depositAmount = totalAmount * 0.3;
-
-  // Create booking
   const booking = await bookingRepository.createPendingBooking({
     appointmentCode,
     customerId,
     barberId: barber.userId,
     branchId,
-    statusId: pendingStatus._id,
+    statusId: pendingStatusId,
     bookingDate,
     startTime,
     endTime,
@@ -195,6 +189,7 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     totalAmount,
     depositAmount,
     holdExpiresAt,
+    timerSeconds: 120,
     status: "PENDING",
     message: "Booking requested. Barber has 2 minutes to accept.",
   };

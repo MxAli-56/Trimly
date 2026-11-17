@@ -10,7 +10,6 @@ import { requestBookingWithTimer } from "../services/booking/requestBookingServi
 import * as bookingActionService from "../services/booking/bookingActionService.js";
 import * as offPeakBookingService from "../services/booking/offPeakBookingService.js";
 import * as barberRescheduleService from "../services/booking/barberRescheduleService.js";
-import * as barberDashboardService from "../services/barber/barberDashboardService.js";
 import * as barberOperationService from "../services/barber/barberOperationService.js";
 
 import {
@@ -234,97 +233,160 @@ export const getCustomerRefundStatus = (req, res) => {
   );
 };
 
+
 export const acceptBarberBooking = async (req, res) => {
   try {
     const barberUserId = getAuthUserId(req);
+
     if (!barberUserId) return unauthorized(res);
 
     const result = await bookingActionService.acceptBooking(
       barberUserId,
-      req.params.bookingId,
+      req.params.bookingId
     );
-    return res
-      .status(200)
-      .json({ success: true, message: result.message, data: result });
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
   } catch (error) {
-    if (error.message === "BOOKING_NOT_FOUND")
-      return res
-        .status(404)
-        .json({ success: false, message: "Booking not found" });
-    if (error.message === "INVALID_STATE")
-      return res
-        .status(400)
-        .json({ success: false, message: "Booking is not in PENDING state" });
-    if (error.message === "TIMER_EXPIRED")
-      return res.status(400).json({
+    if (error.message === "BOOKING_NOT_FOUND") {
+      return res.status(404).json({
         success: false,
-        message: "Timer expired. Booking is now EXPIRED.",
+        message: "Booking not found",
       });
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    }
+
+    if (error.message === "INVALID_STATE") {
+      return res.status(409).json({
+        success: false,
+        message: "Booking is no longer pending",
+      });
+    }
+
+    if (error.message === "TIMER_EXPIRED") {
+      return res.status(409).json({
+        success: false,
+        message: "Barber acceptance timer expired",
+      });
+    }
+
+    console.error("Accept booking error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
+
+
 
 export const rejectBarberBooking = async (req, res) => {
   try {
     const barberUserId = getAuthUserId(req);
+
     if (!barberUserId) return unauthorized(res);
 
     const result = await bookingActionService.rejectBooking(
       barberUserId,
       req.params.bookingId,
-      req.body.reason,
+      req.body.reason
     );
-    return res
-      .status(200)
-      .json({ success: true, message: result.message, data: result });
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
   } catch (error) {
-    if (error.message === "BOOKING_NOT_FOUND")
-      return res
-        .status(404)
-        .json({ success: false, message: "Booking not found" });
-    if (error.message === "INVALID_STATE")
-      return res
-        .status(400)
-        .json({ success: false, message: "Booking is not in PENDING state" });
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    if (error.message === "BOOKING_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
+
+    if (error.message === "INVALID_STATE") {
+      return res.status(409).json({
+        success: false,
+        message: "Booking is no longer pending",
+      });
+    }
+
+    if (error.message === "TIMER_EXPIRED") {
+      return res.status(409).json({
+        success: false,
+        message: "Barber acceptance timer expired",
+      });
+    }
+
+    console.error("Reject booking error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
+
+
 
 export const payBookingDeposit = async (req, res) => {
   try {
     const customerId = getAuthUserId(req);
+
     if (!customerId) return unauthorized(res);
 
     const result = await bookingActionService.payDeposit(
       customerId,
-      req.params.bookingId,
+      req.params.bookingId
     );
-    return res
-      .status(200)
-      .json({ success: true, message: result.message, data: result });
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
   } catch (error) {
-    if (error.message === "BOOKING_NOT_FOUND")
-      return res
-        .status(404)
-        .json({ success: false, message: "Booking not found" });
-    if (error.message === "INVALID_STATE")
-      return res
-        .status(400)
-        .json({ success: false, message: "Booking is not ACCEPTED" });
-    if (error.message === "TIMER_EXPIRED")
-      return res.status(400).json({
+    if (error.message === "BOOKING_NOT_FOUND") {
+      return res.status(404).json({
         success: false,
-        message: "Timer expired. Booking is now EXPIRED.",
+        message: "Booking not found",
       });
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    }
+
+    if (error.message === "INVALID_STATE") {
+      return res.status(409).json({
+        success: false,
+        message: "Booking is not in ACCEPTED state",
+      });
+    }
+
+    if (error.message === "TIMER_EXPIRED") {
+      return res.status(409).json({
+        success: false,
+        message: "Payment timer expired",
+      });
+    }
+
+    if (error.statusCode === 503) {
+      return res.status(503).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    console.error("Payment error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
+
 
 export const createOffPeakBookingHandler = async (req, res) => {
   try {
@@ -440,44 +502,6 @@ export const customerRespondReschedule = async (req, res) => {
   }
 };
 
-export const GetDailyTimeline = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const dateString = req.query.date; // e.g., ?date=2026-11-15
-
-    if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      return res.status(400).json({
-        success: false,
-        error: { code: "INVALID_DATE", message: "Date must be YYYY-MM-DD" },
-      });
-    }
-
-    const timeline = await barberDashboardService.getBarberDailyTimeline(
-      userId,
-      dateString,
-    );
-
-    return res.status(200).json({
-      success: true,
-      data: timeline,
-    });
-  } catch (error) {
-    if (error.message === "PROFILE_NOT_FOUND") {
-      return res.status(404).json({
-        success: false,
-        error: {
-          code: "PROFILE_NOT_FOUND",
-          message: "Barber profile not found",
-        },
-      });
-    }
-    return res.status(500).json({
-      success: false,
-      error: { code: "SERVER_ERROR", message: "Internal server error" },
-    });
-  }
-};
-
 export const startBarberBooking = async (req, res) => {
   try {
     const barberUserId = getAuthUserId(req);
@@ -492,12 +516,10 @@ export const startBarberBooking = async (req, res) => {
       .json({ success: true, message: result.message, data: result });
   } catch (error) {
     if (error.message === "BOOKING_NOT_FOUND")
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Booking not found or doesn't belong to you",
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found or doesn't belong to you",
+      });
     if (error.message === "INVALID_STATE")
       return res
         .status(400)
@@ -513,7 +535,7 @@ export const completeBarberBooking = async (req, res) => {
     const barberUserId = getAuthUserId(req);
     if (!barberUserId) return unauthorized(res);
 
-    const result = await barberOperationsService.completeService(
+    const result = await barberOperationService.completeService(
       barberUserId,
       req.params.bookingId,
     );
@@ -522,18 +544,40 @@ export const completeBarberBooking = async (req, res) => {
       .json({ success: true, message: result.message, data: result });
   } catch (error) {
     if (error.message === "BOOKING_NOT_FOUND")
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found or doesn't belong to you",
+      });
+    if (error.message === "INVALID_STATE")
+      return res.status(400).json({
+        success: false,
+        message: "Booking must be IN_PROGRESS before completing",
+      });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const markBookingNoShow = async (req, res) => {
+  try {
+    const barberUserId = getAuthUserId(req);
+    const result = await barberOperationsService.markNoShow(
+      barberUserId,
+      req.params.bookingId,
+    );
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (error) {
+    if (error.message === "BOOKING_NOT_FOUND")
       return res
         .status(404)
-        .json({
-          success: false,
-          message: "Booking not found or doesn't belong to you",
-        });
+        .json({ success: false, message: "Booking not found" });
     if (error.message === "INVALID_STATE")
       return res
         .status(400)
         .json({
           success: false,
-          message: "Booking must be IN_PROGRESS before completing",
+          message: "Only CONFIRMED bookings can be marked No-Show",
         });
     return res
       .status(500)
