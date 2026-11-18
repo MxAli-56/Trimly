@@ -1,128 +1,332 @@
+
 import { create } from 'zustand';
+import useAuthStore from './useAuthStore';
+import barberService from '../services/BarberService';
 
-/*
- * PLACEHOLDER STORE: uses mock data until the backend endpoints exist.
- * Replace each TODO with a real call in services/BarberService.js.
- *
- *   TODO list     -> GET   /barber/appointments?status=upcoming|completed   (not built)
- *   TODO confirm  -> PATCH /bookings/:id/accept                             (exists)
- *   TODO start    -> PATCH /bookings/:id/start                              (not built)
- *   TODO complete -> PATCH /bookings/:id/complete                           (not built)
- *
- * The list items use the same shape as useBarberStore's normalized bookings:
- * { _id, startTime (ISO), durationMinutes, status, customer, service, price }
- */
+// Extract bookings from API response
+const extractBookings = (response) => {
+  const payload = response?.data ?? response;
 
-const at = (hours, minutes, dayOffset = 0) => {
-  const d = new Date();
-  d.setDate(d.getDate() + dayOffset);
-  d.setHours(hours, minutes, 0, 0);
-  return d.toISOString();
+  if (Array.isArray(payload)) return payload;
+
+  const data = payload?.data ?? payload;
+
+  if (Array.isArray(data)) return data;
+
+  return (
+    data?.bookings ||
+    data?.appointments ||
+    data?.items ||
+    data?.results ||
+    []
+  );
 };
 
-const MOCK_APPOINTMENTS = [
-  {
-    _id: 'a1',
-    startTime: at(11, 0),
-    durationMinutes: 45,
-    status: 'CONFIRMED',
-    customer: { name: 'Hamza Malik', profilePhoto: null },
-    service: { name: 'Skin Fade & Beard Trim' },
-    price: 1800,
-  },
-  {
-    _id: 'a2',
-    startTime: at(12, 30),
-    durationMinutes: 30,
-    status: 'CONFIRMED',
-    customer: { name: 'Usman Sheikh', profilePhoto: null },
-    service: { name: 'Classic Haircut' },
-    price: 1200,
-  },
-  {
-    _id: 'a3',
-    startTime: at(14, 30),
-    durationMinutes: 30,
-    status: 'PENDING_BARBER_APPROVAL',
-    customer: { name: 'Danish Raza', profilePhoto: null },
-    service: { name: 'Hot Towel Shave' },
-    price: 900,
-  },
-  {
-    _id: 'a4',
-    startTime: at(16, 0),
-    durationMinutes: 45,
-    status: 'PENDING_BARBER_APPROVAL',
-    customer: { name: 'Saad Qureshi', profilePhoto: null },
-    service: { name: 'Hair Cut' },
-    price: 1000,
-  },
-  {
-    _id: 'a5',
-    startTime: at(10, 0, -1),
-    durationMinutes: 30,
-    status: 'COMPLETED',
-    customer: { name: 'Bilal Ahmed', profilePhoto: null },
-    service: { name: 'Beard Trim' },
-    price: 700,
-  },
-  {
-    _id: 'a6',
-    startTime: at(15, 0, -2),
-    durationMinutes: 45,
-    status: 'COMPLETED',
-    customer: { name: 'Faisal Khan', profilePhoto: null },
-    service: { name: 'Haircut & Beard' },
-    price: 1900,
-  },
-];
+// Convert booking date + HH:mm into a local Date
+const getBookingStartTime = (booking) => {
+  const time = booking.startTime || booking.startAt;
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  if (!time) return '';
+
+  // Already a complete date/time
+  if (time.includes('T')) {
+    return time;
+  }
+
+  const dateValue = booking.bookingDate || booking.date;
+
+  if (!dateValue) return '';
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return '';
+
+  const [hours, minutes] = time.split(':').map(Number);
+
+  // Use the calendar date, then construct local time
+  return new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    hours,
+    minutes
+  ).toISOString();
+};
+
+// Normalize backend booking for the existing UI
+const normalizeBooking = (booking) => {
+  const services = Array.isArray(booking.services)
+    ? booking.services
+    : [];
+
+  const customer = booking.customerId || booking.customer || {};
+
+  const status =
+    booking.statusId?.name ||
+    booking.status?.name ||
+    booking.status ||
+    '';
+
+  const serviceName =
+    services.map((service) => service.name).filter(Boolean).join(', ') ||
+    booking.service?.name ||
+    booking.serviceName ||
+    'Service';
+
+  const durationMinutes =
+    booking.totalDuration ||
+    services.reduce(
+      (total, service) => total + (service.durationMinutes || 0),
+      0
+    ) ||
+    booking.durationMinutes ||
+    30;
+
+  return {
+    ...booking,
+
+    _id: booking._id || booking.id || booking.bookingId,
+
+    startTime: getBookingStartTime(booking),
+
+    durationMinutes,
+
+    status: String(status).toUpperCase(),
+
+    customer: {
+      name: customer.name || 'Customer',
+      profilePhoto:
+        customer.profilePhoto ||
+        customer.profileImage ||
+        null,
+    },
+
+    service: {
+      name: serviceName,
+    },
+
+    price:
+      booking.totalAmount ??
+      booking.totalPrice ??
+      booking.price ??
+      0,
+  };
+};
+
+const getErrorMessage = (error) =>
+  error.response?.data?.message ||
+  error.message ||
+  'Something went wrong';
 
 const useBarberAppointmentsStore = create((set, get) => ({
   appointments: [],
   loading: false,
-  actionId: null, // id of the booking an action is running on
+  actionId: null,
 
-  // TODO: replace with GET /barber/appointments
+  // GET upcoming and completed appointments
   fetchAppointments: async () => {
+    const token = useAuthStore.getState().token;
+
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication required',
+      };
+    }
+
     set({ loading: true });
-    await delay(500);
-    set({ appointments: MOCK_APPOINTMENTS, loading: false });
-    return { success: true };
+
+    try {
+      const [upcomingResponse, completedResponse] =
+        await Promise.all([
+          barberService.getUpcomingBookings(
+            { page: 1, limit: 50 },
+            token
+          ),
+          barberService.getCompletedBookings(
+            { page: 1, limit: 50 },
+            token
+          ),
+        ]);
+
+      const upcoming = extractBookings(upcomingResponse);
+      const completed = extractBookings(completedResponse);
+
+      const normalized = [...upcoming, ...completed]
+        .map(normalizeBooking)
+        .filter((booking) => booking._id);
+
+      // Remove duplicate bookings
+      const uniqueAppointments = [
+        ...new Map(
+          normalized.map((booking) => [
+            booking._id,
+            booking,
+          ])
+        ).values(),
+      ];
+
+      uniqueAppointments.sort(
+        (a, b) =>
+          new Date(a.startTime) - new Date(b.startTime)
+      );
+
+      set({
+        appointments: uniqueAppointments,
+        loading: false,
+      });
+
+      return { success: true };
+    } catch (error) {
+      set({ loading: false });
+
+      return {
+        success: false,
+        message: getErrorMessage(error),
+      };
+    }
   },
 
-  _setStatus: (id, status) =>
+  // Update booking status locally
+  _setStatus: (id, status, updatedBooking = null) =>
     set((state) => ({
-      appointments: state.appointments.map((a) => (a._id === id ? { ...a, status } : a)),
+      appointments: state.appointments.map((appointment) =>
+        appointment._id === id
+          ? {
+              ...appointment,
+              ...(updatedBooking || {}),
+              status,
+            }
+          : appointment
+      ),
     })),
 
-  // TODO: PATCH /bookings/:id/accept  (customer then pays the deposit)
+  // Accept booking
   confirmAppointment: async (id) => {
+    const token = useAuthStore.getState().token;
+
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication required',
+      };
+    }
+
     set({ actionId: id });
-    await delay(400);
-    get()._setStatus(id, 'ACCEPTED');
-    set({ actionId: null });
-    return { success: true };
+
+    try {
+      const response = await barberService.acceptBooking(id, token);
+
+      const updatedBooking =
+        response?.data?.booking || response?.data;
+
+      get()._setStatus(
+        id,
+        updatedBooking?.statusId?.name ||
+          updatedBooking?.status ||
+          'ACCEPTED',
+        updatedBooking
+      );
+
+      await get().fetchAppointments();
+
+      return { success: true, data: response };
+    } catch (error) {
+      return {
+        success: false,
+        message: getErrorMessage(error),
+      };
+    } finally {
+      set({ actionId: null });
+    }
   },
 
-  // TODO: PATCH /bookings/:id/start
+  // Start service
   startService: async (id) => {
+    const token = useAuthStore.getState().token;
+
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication required',
+      };
+    }
+
     set({ actionId: id });
-    await delay(400);
-    get()._setStatus(id, 'IN_PROGRESS');
-    set({ actionId: null });
-    return { success: true };
+
+    try {
+      const response = await barberService.startBooking(id, token);
+
+      const updatedBooking =
+        response?.data?.booking || response?.data;
+
+      get()._setStatus(
+        id,
+        updatedBooking?.statusId?.name ||
+          updatedBooking?.status ||
+          'IN_PROGRESS',
+        updatedBooking
+      );
+
+      await get().fetchAppointments();
+
+      return { success: true, data: response };
+    } catch (error) {
+      return {
+        success: false,
+        message: getErrorMessage(error),
+      };
+    } finally {
+      set({ actionId: null });
+    }
   },
 
-  // TODO: PATCH /bookings/:id/complete
+  // Complete service
   completeService: async (id) => {
+    const token = useAuthStore.getState().token;
+
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication required',
+      };
+    }
+
     set({ actionId: id });
-    await delay(400);
-    get()._setStatus(id, 'COMPLETED');
-    set({ actionId: null });
-    return { success: true };
+
+    try {
+      const response = await barberService.completeBooking(id, token);
+
+      const updatedBooking =
+        response?.data?.booking || response?.data;
+
+      get()._setStatus(
+        id,
+        updatedBooking?.statusId?.name ||
+          updatedBooking?.status ||
+          'COMPLETED',
+        updatedBooking
+      );
+
+      await get().fetchAppointments();
+
+      return { success: true, data: response };
+    } catch (error) {
+      return {
+        success: false,
+        message: getErrorMessage(error),
+      };
+    } finally {
+      set({ actionId: null });
+    }
   },
+
+  reset: () =>
+    set({
+      appointments: [],
+      loading: false,
+      actionId: null,
+    }),
 }));
 
 export default useBarberAppointmentsStore;
