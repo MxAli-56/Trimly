@@ -19,7 +19,14 @@ const createError = (message, statusCode = 400) => {
 };
 
 export const createBooking = async (userId, payload = {}) => {
-  const { barberId, serviceId, date, startTime } = payload;
+  const { barberProfileId, serviceIds, date, startTime } = payload;
+
+  const barberId = barberProfileId;
+  const serviceId = serviceIds?.[0];
+
+  if (!Array.isArray(serviceIds) || serviceIds.length !== 1) {
+    throw createError("Exactly one service is supported by this booking flow");
+  }
 
   if (!mongoose.isValidObjectId(userId)) {
     throw createError("Invalid customer ID", 401);
@@ -60,9 +67,9 @@ export const createBooking = async (userId, payload = {}) => {
     throw createError("Barber or service not found", 404);
   }
 
-  if (String(barber.currentBranchId) !== String(service.branchId)) {
-    throw createError("Service does not belong to barber's branch");
-  }
+  if (String(barber.branchId) !== String(service.branchId)) {
+  throw createError("Service does not belong to barber's branch");
+}
 
   const status = await findBookingStatus("PENDING", STATUS_TYPES.BOOKING);
 
@@ -94,7 +101,7 @@ export const createBooking = async (userId, payload = {}) => {
     appointmentCode,
     customerId: userId,
     barberId: barber.userId,
-    branchId: barber.currentBranchId, // branchId -> currentBranchId
+   branchId: barber.branchId,// branchId -> currentBranchId
     statusId: status._id,
     bookingDate,
     startTime,

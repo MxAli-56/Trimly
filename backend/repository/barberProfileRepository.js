@@ -1,4 +1,5 @@
 import BarberProfile from "../model/barberProfileModel.js";
+import mongoose from "mongoose";
 
 export const findBarbersByBranchId = async (branchId) => {
   return await BarberProfile.find({
