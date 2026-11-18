@@ -71,6 +71,60 @@ const statuses = [
     type: "BOOKING",
     description: "Customer did not arrive for the appointment",
   },
+
+  // SCHEDULE_DAY Statuses (Individual Days)
+  {
+    name: "PENDING",
+    type: "SCHEDULE_DAY",
+    description: "Waiting for owner approval",
+  },
+  {
+    name: "APPROVED",
+    type: "SCHEDULE_DAY",
+    description: "Owner approved this day",
+  },
+  {
+    name: "REJECTED",
+    type: "SCHEDULE_DAY",
+    description: "Owner rejected this day",
+  },
+  {
+    name: "APPLIED",
+    type: "SCHEDULE_DAY",
+    description: "Change applied to schedule",
+  },
+
+  // SCHEDULE_REQUEST Statuses (Overall Request)
+  {
+    name: "PENDING_OWNER_APPROVAL",
+    type: "SCHEDULE_REQUEST",
+    description: "Waiting for owner to review",
+  },
+  {
+    name: "PARTIALLY_APPROVED",
+    type: "SCHEDULE_REQUEST",
+    description: "Some days approved, some rejected",
+  },
+  {
+    name: "FULLY_APPROVED",
+    type: "SCHEDULE_REQUEST",
+    description: "All days approved",
+  },
+  {
+    name: "REJECTED",
+    type: "SCHEDULE_REQUEST",
+    description: "All days rejected",
+  },
+  {
+    name: "EXPIRED",
+    type: "SCHEDULE_REQUEST",
+    description: "7 days passed without owner action",
+  },
+  {
+    name: "APPLIED",
+    type: "SCHEDULE_REQUEST",
+    description: "Changes applied to schedule",
+  },
 ];
 
 const seedStatuses = async () => {

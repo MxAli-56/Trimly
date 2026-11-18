@@ -18,6 +18,7 @@ app.use(express.json());
 app.use("/api/customer", customerRoute);
 app.use("/api/bookings", bookingRoute);
 app.use("/api/barber", barberRoute);
+app.use("/api/owner", ownerRoute);
 app.use("/api/reviews", reviewRoutes);
 
 app.use("/auth", authRoutes);

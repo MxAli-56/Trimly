@@ -2,6 +2,7 @@ import * as barberService from "../services/barber/barberScheduleService.js";
 import * as barberAvailabilityService from "../services/barber/barberAvailabilityService.js";
 import * as barberDashboardService from "../services/barber/barberDashboardService.js";
 import * as barberProfileService from "../services/barber/barberProfileService.js";
+import * as scheduleRequestService from "../services/barber/barberScheduleRequestService.js";
 
 export const GetSchedule = async (req, res) => {
   try {
@@ -250,14 +251,20 @@ export const GetCompletedBookings = async (req, res) => {
 export const GetTodayAppointments = async (req, res) => {
   try {
     const barberUserId = req.user.id;
-    const result = await barberDashboardService.getTodayAppointments(barberUserId);
-    
+    const result =
+      await barberDashboardService.getTodayAppointments(barberUserId);
+
     return res.status(200).json({
       success: true,
       data: result,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, error: { code: "SERVER_ERROR", message: "Internal server error" } });
+    return res
+      .status(500)
+      .json({
+        success: false,
+        error: { code: "SERVER_ERROR", message: "Internal server error" },
+      });
   }
 };
 
@@ -285,6 +292,46 @@ export const UpdateMyProfile = async (req, res) => {
     return res
       .status(200)
       .json({ success: true, message: "Profile updated", data: updated });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const RequestScheduleUpdate = async (req, res) => {
+  try {
+    const request = await scheduleRequestService.createScheduleRequest(
+      req.user.id,
+      req.body.schedule,
+    );
+    return res
+      .status(201)
+      .json({
+        success: true,
+        message: "Request submitted for owner approval",
+        data: request,
+      });
+  } catch (error) {
+    if (error.message === "PENDING_REQUEST_EXISTS")
+      return res
+        .status(409)
+        .json({
+          success: false,
+          message: "You already have a pending request",
+        });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const GetScheduleRequests = async (req, res) => {
+  try {
+    const requests = await scheduleRequestService.getBarberRequests(
+      req.user.id,
+    );
+    return res.status(200).json({ success: true, data: requests });
   } catch (error) {
     return res
       .status(500)

@@ -8,10 +8,12 @@ import {
   DeleteLeave,
   GetUpcomingBookings,
   GetDailyTimeline,
-  GetTodayAppointments,   
-  GetCompletedBookings,   
-  GetMyProfile,            
-  UpdateMyProfile            
+  GetTodayAppointments,
+  GetCompletedBookings,
+  GetMyProfile,
+  UpdateMyProfile,
+  RequestScheduleUpdate,
+  GetScheduleRequests,
 } from "../controller/barberController.js";
 
 import authenticate from "../middleware/Auth.js";
@@ -57,5 +59,9 @@ router.get("/bookings/completed", validateQuery(paginationQuerySchema), GetCompl
 // 3. Profile Tab
 router.get("/profile", GetMyProfile);
 router.put("/profile", validateBody(updateProfileSchema), UpdateMyProfile);
+
+// Barber Schedule
+router.post("/schedule/request", RequestScheduleUpdate);
+router.get("/schedule/requests", GetScheduleRequests);
 
 export default router;
