@@ -528,3 +528,32 @@ Customer se /cancel endpoint hit karwao.
 DB mein check karo: cancelReason mein "LATE_CANCEL: ..." likha hoga.
 
 Barber appointments/today call karega toh Risk Score automatically barha hua aayega.
+
+
+
+
+-----Barber Schedule Update and Approve------
+
+1. Barber Sends Request
+
+Method: POST
+
+URL: http://localhost:5000/api/barber/schedule/send-request
+
+Body: { "schedule": [...] }
+
+
+2. Barber Views Requests
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/schedule/my-requests
+
+
+3. Owner Approves/Rejects Request
+
+Method: PATCH
+
+URL: http://localhost:5000/api/owner/schedule/approve-request/<REQUEST_ID>
+
+Body: { "approvedDays": ["MONDAY"], "rejectedDays": ["TUESDAY"] }

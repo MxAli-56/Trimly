@@ -8,6 +8,6 @@ const router = express.Router();
 router.use(authenticate);
 router.use(requiredRoles(ROLES.SALON_OWNER));
 
-router.patch("/schedule/requests/:requestId", ReviewScheduleRequest);
+router.patch("/schedule/approve-request/:requestId", ReviewScheduleRequest);
 
 export default router;

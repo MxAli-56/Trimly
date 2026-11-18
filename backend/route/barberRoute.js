@@ -61,7 +61,7 @@ router.get("/profile", GetMyProfile);
 router.put("/profile", validateBody(updateProfileSchema), UpdateMyProfile);
 
 // Barber Schedule
-router.post("/schedule/request", RequestScheduleUpdate);
-router.get("/schedule/requests", GetScheduleRequests);
+router.post("/schedule/send-request", RequestScheduleUpdate);
+router.get("/schedule/my-requests", GetScheduleRequests);
 
 export default router;
