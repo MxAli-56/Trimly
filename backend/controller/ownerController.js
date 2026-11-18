@@ -1,4 +1,4 @@
-import * as scheduleRequestService from "../services/barber/scheduleRequestService.js";
+import * as scheduleRequestService from "../services/barber/barberScheduleRequestService.js";
 
 export const ReviewScheduleRequest = async (req, res) => {
   try {

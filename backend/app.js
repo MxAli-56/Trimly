@@ -8,6 +8,7 @@ import customerRoute from "./route/customerRoute.js";
 import bookingRoute from "./route/bookingRoute.js";
 import barberRoute from "./route/barberRoute.js";
 import reviewRoutes from "./route/reviewRoute.js";
+import ownerRoute from "./route/ownerRoute.js";
 
 const app = express();
 
