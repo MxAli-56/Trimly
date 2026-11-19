@@ -1,15 +1,24 @@
-// services/booking/requestBookingService.js
+
+import mongoose from "mongoose";
+import { randomUUID } from "node:crypto";
+
 import * as bookingRepository from "../../repository/bookingRepository.js";
 import * as barberProfileRepository from "../../repository/barberProfileRepository.js";
 import * as serviceRepository from "../../repository/serviceRepository.js";
-import Status from "../../model/statusModel.js";
-import mongoose from "mongoose";
 
-export const requestBookingWithTimer = async (customerId, payload) => {
+import Status from "../../model/statusModel.js";
+
+export const requestBookingWithTimer = async (customerId, payload = {}) => {
   const { barberProfileId, serviceIds, date, startTime } = payload;
+
+  if (!mongoose.isValidObjectId(customerId)) {
+    throw new Error("INVALID_CUSTOMER");
+  }
+
   if (!mongoose.isValidObjectId(barberProfileId)) {
     throw new Error("BARBER_NOT_FOUND");
   }
+
   if (!Array.isArray(serviceIds) || serviceIds.length === 0) {
     throw new Error("INVALID_SERVICES");
   }
@@ -33,81 +42,140 @@ export const requestBookingWithTimer = async (customerId, payload) => {
     typeof date !== "string" ||
     !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
     !Number.isFinite(Date.parse(`${date}T00:00:00.000Z`)) ||
-    new Date(`${date}T00:00:00.000Z`).toISOString().slice(0, 10) !== date
+    new Date(`${date}T00:00:00.000Z`)
+      .toISOString()
+      .slice(0, 10) !== date
   ) {
     throw new Error("INVALID_DATE");
   }
 
+  // Find barber profile
   const barber =
     await barberProfileRepository.findBarberProfile(barberProfileId);
-  if (!barber) throw new Error("BARBER_NOT_FOUND");
 
+  if (!barber) {
+    throw new Error("BARBER_NOT_FOUND");
+  }
+
+  // FIX: Database uses branchId, not currentBranchId
+  const branchId = barber.branchId;
+
+  if (!branchId || !mongoose.isValidObjectId(branchId)) {
+    throw new Error("BARBER_BRANCH_NOT_FOUND");
+  }
+
+  // Fetch active services belonging to the barber's branch
   const services = await serviceRepository.findServicesByIds(
     serviceIds,
-    barber.currentBranchId
+    branchId
   );
-  if (services.length !== serviceIds.length)
+
+  if (services.length !== serviceIds.length) {
     throw new Error("INVALID_SERVICES");
+  }
 
   let totalDuration = 0;
   let totalAmount = 0;
-  const servicesSnapshot = services.map((s) => {
-    totalDuration += s.durationMinutes;
-    totalAmount += s.price;
+
+  const servicesSnapshot = services.map((service) => {
+    totalDuration += service.durationMinutes;
+    totalAmount += service.price;
+
     return {
-      serviceId: s._id,
-      name: s.name,
-      price: s.price,
-      durationMinutes: s.durationMinutes,
+      serviceId: service._id,
+      name: service.name,
+      price: service.price,
+      durationMinutes: service.durationMinutes,
     };
   });
 
+  if (
+    !Number.isFinite(totalDuration) ||
+    totalDuration <= 0 ||
+    !Number.isFinite(totalAmount)
+  ) {
+    throw new Error("INVALID_SERVICES");
+  }
+
+  // Calculate booking end time
   const [startHour, startMin] = startTime.split(":").map(Number);
-  const endTotalMin = startHour * 60 + startMin + totalDuration;
+
+  const endTotalMin =
+    startHour * 60 + startMin + totalDuration;
+
   if (endTotalMin > 24 * 60) {
     throw new Error("INVALID_BOOKING_DURATION");
   }
-  const endTime = `${String(Math.floor(endTotalMin / 60)).padStart(2, "0")}:${String(endTotalMin % 60).padStart(2, "0")}`;
+
+  const endTime =
+    `${String(Math.floor(endTotalMin / 60)).padStart(2, "0")}:` +
+    `${String(endTotalMin % 60).padStart(2, "0")}`;
 
   const bookingDate = new Date(`${date}T00:00:00.000Z`);
+
+  // Check existing booking conflicts
   const conflicts = await bookingRepository.findConflictingBookings(
     barber.userId,
     bookingDate,
     startTime,
-    endTime,
+    endTime
   );
 
-  const activeConflict = conflicts.some((c) => {
-    const statusName = c.statusId?.name;
-    if (["CONFIRMED", "IN_PROGRESS", "COMPLETED"].includes(statusName))
+  const activeConflict = conflicts.some((booking) => {
+    const statusName = booking.statusId?.name;
+
+    if (
+      ["CONFIRMED", "IN_PROGRESS", "COMPLETED"].includes(statusName)
+    ) {
       return true;
-    if (statusName === "PENDING" && c.holdExpiresAt > new Date()) return true;
+    }
+
+    if (
+      statusName === "PENDING" &&
+      booking.holdExpiresAt &&
+      new Date(booking.holdExpiresAt) > new Date()
+    ) {
+      return true;
+    }
+
     return false;
   });
 
-  if (activeConflict) throw new Error("SLOT_NOT_AVAILABLE");
+  if (activeConflict) {
+    throw new Error("SLOT_NOT_AVAILABLE");
+  }
 
+  // Get pending booking status
   const pendingStatus = await Status.findOne({
     name: "PENDING",
     type: "BOOKING",
   });
+
   if (!pendingStatus) {
     throw new Error("PENDING_STATUS_NOT_FOUND");
   }
+
+  // Barber has 2 minutes to accept
   const holdExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
+  const appointmentCode =
+    `TRM-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+
+  const depositAmount = totalAmount * 0.3;
+
+  // Create booking
   const booking = await bookingRepository.createPendingBooking({
-    appointmentCode: `TRM-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+    appointmentCode,
     customerId,
     barberId: barber.userId,
-    branchId: barber.currentBranchId,
+    branchId,
     statusId: pendingStatus._id,
     bookingDate,
     startTime,
     endTime,
     services: servicesSnapshot,
     totalAmount,
-    depositAmount: totalAmount * 0.3,
+    depositAmount,
     isOffPeakBooking: false,
     holdExpiresAt,
   });
@@ -117,14 +185,15 @@ export const requestBookingWithTimer = async (customerId, payload) => {
     appointmentCode: booking.appointmentCode,
     customerId,
     barberId: barber.userId,
-    branchId: barber.currentBranchId,
+    barberProfileId,
+    branchId,
     services: servicesSnapshot,
     date,
     startTime,
     endTime,
     totalDuration,
     totalAmount,
-    depositAmount: totalAmount * 0.3,
+    depositAmount,
     holdExpiresAt,
     status: "PENDING",
     message: "Booking requested. Barber has 2 minutes to accept.",

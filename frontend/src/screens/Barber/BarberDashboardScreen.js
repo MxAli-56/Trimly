@@ -14,7 +14,7 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-
+import TodayAppointmentCard from '../../components/Barber/TodayAppointmentCard';
 import Colors from '../../constants/Colors';
 import useAuthStore from '../../store/useAuthStore';
 import useBarberStore from '../../store/useBarberStore';
@@ -49,12 +49,61 @@ const minutesUntil = (iso) => Math.round((new Date(iso) - new Date()) / 60000);
 const formatMoney = (n) => `Rs ${Number(n || 0).toLocaleString('en-PK')}`;
 
 const STATUS = {
-  PENDING_BARBER_APPROVAL: { label: 'Pending', bg: '#FCEBDD', border: '#F2C9A5', color: '#C2661F' },
-  ACCEPTED: { label: 'Awaiting payment', bg: '#FDF4D9', border: '#EBD9A0', color: '#8A6A12' },
-  CONFIRMED: { label: 'Confirmed', bg: '#E6F3EA', border: '#B9DCC5', color: '#2F7A4D' },
-  COMPLETED: { label: 'Completed', bg: '#EAF0F8', border: '#C5D4EA', color: '#3B63A0' },
-  REJECTED: { label: 'Rejected', bg: '#FCEAEA', border: '#F2D8D8', color: '#B33A3A' },
-  CANCELLED: { label: 'Cancelled', bg: '#FCEAEA', border: '#F2D8D8', color: '#B33A3A' },
+  PENDING: {
+    label: 'Pending',
+    bg: '#FCEBDD',
+    border: '#F2C9A5',
+    color: '#C2661F',
+  },
+
+  PENDING_BARBER_APPROVAL: {
+    label: 'Pending',
+    bg: '#FCEBDD',
+    border: '#F2C9A5',
+    color: '#C2661F',
+  },
+
+  ACCEPTED: {
+    label: 'Awaiting payment',
+    bg: '#FDF4D9',
+    border: '#EBD9A0',
+    color: '#8A6A12',
+  },
+
+  CONFIRMED: {
+    label: 'Confirmed',
+    bg: '#E6F3EA',
+    border: '#B9DCC5',
+    color: '#2F7A4D',
+  },
+
+  IN_PROGRESS: {
+    label: 'In progress',
+    bg: '#EAF0F8',
+    border: '#C5D4EA',
+    color: '#3B63A0',
+  },
+
+  COMPLETED: {
+    label: 'Completed',
+    bg: '#EAF0F8',
+    border: '#C5D4EA',
+    color: '#3B63A0',
+  },
+
+  REJECTED: {
+    label: 'Rejected',
+    bg: '#FCEAEA',
+    border: '#F2D8D8',
+    color: '#B33A3A',
+  },
+
+  CANCELLED: {
+    label: 'Cancelled',
+    bg: '#FCEAEA',
+    border: '#F2D8D8',
+    color: '#B33A3A',
+  },
 };
 
 const INACTIVE = ['COMPLETED', 'CANCELLED', 'REJECTED'];
@@ -76,6 +125,19 @@ export default function BarberDashboardScreen({ navigation }) {
   } = useBarberStore();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+
+  const handleAvailabilityChange = async (value) => {
+    if (availabilityLoading) return;
+
+    setAvailabilityLoading(true);
+
+    try {
+      await toggleAvailability(value);
+    } finally {
+      setAvailabilityLoading(false);
+    }
+  };
 
   const name = user?.name || 'Barber';
   const profilePhoto = user?.profilePhoto;
@@ -90,8 +152,12 @@ export default function BarberDashboardScreen({ navigation }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchDashboard();
-    setRefreshing(false);
+
+    try {
+      await fetchDashboard();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   /* -------------------------- derived ------------------------------ */
@@ -219,8 +285,12 @@ export default function BarberDashboardScreen({ navigation }) {
           </Text>
           <Switch
             value={isAvailable}
-            onValueChange={toggleAvailability}
-            trackColor={{ false: Colors.border, true: Colors.accent }}
+            onValueChange={handleAvailabilityChange}
+            disabled={availabilityLoading}
+            trackColor={{
+              false: Colors.border,
+              true: Colors.accent,
+            }}
             thumbColor={Colors.white}
           />
         </View>
@@ -241,75 +311,6 @@ export default function BarberDashboardScreen({ navigation }) {
             </View>
 
             {/* Up next */}
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionHeading}>UP NEXT</Text>
-              {next && (
-                <View style={styles.inRow}>
-                  <Ionicons name="time-outline" size={12} color={Colors.textGold} />
-                  <Text style={styles.inText}>
-                    {minutesUntil(next.startTime) > 0
-                      ? `in ${minutesUntil(next.startTime)} mins`
-                      : 'now'}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {next ? (
-              <View style={styles.nextCard}>
-                <View style={styles.orbitalRingOuter} />
-                <View style={styles.orbitalRingInner} />
-
-                <View style={styles.nextTop}>
-                  {next.customer?.profilePhoto ? (
-                    <Image source={{ uri: next.customer.profilePhoto }} style={styles.nextAvatar} />
-                  ) : (
-                    <View style={[styles.nextAvatar, styles.nextAvatarFallback]}>
-                      <Ionicons name="person" size={22} color={Colors.accent} />
-                    </View>
-                  )}
-
-                  <View style={styles.nextInfo}>
-                    <Text style={styles.nextName} numberOfLines={1}>
-                      {next.customer?.name || 'Customer'}
-                    </Text>
-                    <Text style={styles.nextService} numberOfLines={1}>
-                      {next.service?.name || 'Service'}
-                    </Text>
-                  </View>
-
-                  <StatusPill status={next.status} />
-                </View>
-
-                <View style={styles.timeBox}>
-                  <Ionicons name="alarm-outline" size={17} color={Colors.accent} />
-                  <Text style={styles.timeBoxTime}>
-                    {splitTime(next.startTime).clock} {splitTime(next.startTime).period}
-                  </Text>
-                  <View style={styles.timeBoxDot} />
-                  <Text style={styles.timeBoxDuration}>
-                    {next.durationMinutes || 30} minutes
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.primaryButton}
-                  activeOpacity={0.85}
-                  onPress={() =>
-                    navigation.navigate('AppointmentDetails', { appointmentId: next._id })
-                  }
-                >
-                  <Text style={styles.primaryButtonText}>View Appointment</Text>
-                  <Ionicons name="arrow-forward" size={15} color={Colors.primary} />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.emptyCard}>
-                <MaterialCommunityIcons name="coffee-outline" size={26} color={Colors.textMuted} />
-                <Text style={styles.emptyTitle}>No upcoming appointments</Text>
-                <Text style={styles.emptySub}>Enjoy the break — new bookings will show up here.</Text>
-              </View>
-            )}
 
             {/* Today's schedule */}
             <View style={styles.sectionHeaderRow}>
@@ -317,36 +318,33 @@ export default function BarberDashboardScreen({ navigation }) {
               <Text style={styles.sectionCount}>{sorted.length} total</Text>
             </View>
 
-            {sorted.slice(0, 4).map((a) => {
-              const t = splitTime(a.startTime);
-              const isNext = next && next._id === a._id;
-              return (
-                <TouchableOpacity
-                  key={a._id}
-                  style={styles.row}
-                  activeOpacity={0.8}
-                  onPress={() => navigation.navigate('AppointmentDetails', { appointmentId: a._id })}
-                >
-                  <View style={styles.rowTime}>
-                    <Text style={[styles.rowClock, isNext && { color: Colors.textGold }]}>
-                      {t.clock}
-                    </Text>
-                    <Text style={styles.rowPeriod}>{t.period}</Text>
-                  </View>
-
-                  <View style={styles.rowInfo}>
-                    <Text style={styles.rowName} numberOfLines={1}>
-                      {a.customer?.name || 'Customer'}
-                    </Text>
-                    <Text style={styles.rowService} numberOfLines={1}>
-                      {a.service?.name || 'Service'}
-                    </Text>
-                  </View>
-
-                  <StatusPill status={a.status} />
-                </TouchableOpacity>
-              );
-            })}
+            {sorted.length > 0 ? (
+              sorted.slice(0, 4).map((appointment) => (
+                <TodayAppointmentCard
+                  key={appointment._id || appointment.id}
+                  appointment={appointment}
+                  onPress={() =>
+                    navigation.navigate('AppointmentDetails', {
+                      appointmentId: appointment._id || appointment.id,
+                    })
+                  }
+                />
+              ))
+            ) : (
+              <View style={styles.emptyCard}>
+                <MaterialCommunityIcons
+                  name="calendar-blank-outline"
+                  size={26}
+                  color={Colors.textMuted}
+                />
+                <Text style={styles.emptyTitle}>
+                  No appointments today
+                </Text>
+                <Text style={styles.emptySub}>
+                  Your schedule is currently empty.
+                </Text>
+              </View>
+            )}
 
             {/* View all */}
             <TouchableOpacity

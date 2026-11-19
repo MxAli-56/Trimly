@@ -1,4 +1,5 @@
 import BarberProfile from "../model/barberProfileModel.js";
+import mongoose from "mongoose";
 
 export const findBarbersByBranchId = async (branchId) => {
   return await BarberProfile.find({
@@ -46,10 +47,56 @@ export const findBarberProfile = async (barberProfileId) => {
   }).lean();
 };
 
-export const updateAvailabilityStatus = async (barberProfileId, isAvailable) => {
+export const updateAvailabilityStatus = async (
+  barberProfileId,
+  isAvailable,
+) => {
   return await BarberProfile.findByIdAndUpdate(
     barberProfileId,
     { $set: { isAvailable } },
-    { new: true }
+    { new: true },
   ).select("_id isAvailable");
+};
+
+export const updateBarberProfile = async (barberProfileId, updateData) => {
+  return await BarberProfile.findByIdAndUpdate(
+    barberProfileId,
+    { $set: updateData },
+    { returnDocument: "after", runValidators: true },
+  ).populate("userId", "name email phone profilePhoto");
+};
+
+export const atomicUpdateBarberRating = async (barberProfileId, newRating) => {
+  return await BarberProfile.findByIdAndUpdate(
+    barberProfileId,
+    [
+      {
+        $set: {
+          ratingCount: { $add: [{ $ifNull: ["$ratingCount", 0] }, 1] },
+          avgRating: {
+            $round: [
+              {
+                $divide: [
+                  {
+                    $add: [
+                      {
+                        $multiply: [
+                          { $ifNull: ["$avgRating", 0] },
+                          { $ifNull: ["$ratingCount", 0] },
+                        ],
+                      },
+                      newRating,
+                    ],
+                  },
+                  { $add: [{ $ifNull: ["$ratingCount", 0] }, 1] },
+                ],
+              },
+              1,
+            ],
+          },
+        },
+      },
+    ],
+    { returnDocument: "after" },
+  );
 };

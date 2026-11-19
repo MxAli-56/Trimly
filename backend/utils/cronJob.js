@@ -3,9 +3,9 @@ import Booking from "../model/bookingModel.js";
 import Status from "../model/statusModel.js";
 import Refund from "../model/refundModel.js";
 import Payment from "../model/paymentModel.js";
+import * as requestRepo from "../repository/scheduleUpdateRequestRepository.js"; // Import added
 
 export const startCronJobs = () => {
-  // Run every minute
   cron.schedule("* * * * *", async () => {
     try {
       const now = new Date();
@@ -27,6 +27,11 @@ export const startCronJobs = () => {
             },
           },
           { type: "REFUND", name: "PENDING" },
+          {
+            type: "SCHEDULE_REQUEST",
+            name: { $in: ["EXPIRED", "APPLIED", "PENDING_OWNER_APPROVAL"] },
+          },
+          { type: "SCHEDULE_DAY", name: { $in: ["REJECTED", "APPROVED"] } },
         ],
       });
 
@@ -39,7 +44,7 @@ export const startCronJobs = () => {
         return status._id;
       };
 
-      // 1. Expire PENDING_BARBER and PENDING_CUSTOMER (Timeout)
+      // 1. Expire PENDING_BARBER and PENDING_CUSTOMER
       await Booking.updateMany(
         {
           statusId: {
@@ -54,7 +59,7 @@ export const startCronJobs = () => {
         { $set: { statusId: getStatusId("EXPIRED"), holdExpiresAt: null } },
       );
 
-      // 2. Expire PENDING_BARBER_APPROVAL (Off-peak, auto reject if < 1 hr before booking)
+      // 2. Expire PENDING_BARBER_APPROVAL
       const offPeakBookings = await Booking.find({
         statusId: getStatusId("PENDING_BARBER_APPROVAL"),
         deletedAt: null,
@@ -67,12 +72,10 @@ export const startCronJobs = () => {
         const oneHourBefore = new Date(
           bookingDateTime.getTime() - 60 * 60 * 1000,
         );
-
         if (now > oneHourBefore) {
           await Booking.findByIdAndUpdate(b._id, {
             statusId: getStatusId("CANCELLED"),
           });
-
           const payment = await Payment.findOne({ bookingId: b._id });
           if (payment) {
             await Refund.create({
@@ -86,7 +89,7 @@ export const startCronJobs = () => {
         }
       }
 
-      // 3. Expire PENDING_CUSTOMER_RESCHEDULE (Customer didn't respond in time)
+      // 3. Expire PENDING_CUSTOMER_RESCHEDULE
       const expiredReschedules = await Booking.find({
         statusId: getStatusId("PENDING_CUSTOMER_RESCHEDULE"),
         holdExpiresAt: { $lt: now },
@@ -100,8 +103,6 @@ export const startCronJobs = () => {
           rescheduleProposedStartTime: null,
           rescheduleProposedEndTime: null,
         });
-
-        // Off-peak bookings were already paid, so they need a refund
         if (b.isOffPeakBooking) {
           const payment = await Payment.findOne({ bookingId: b._id });
           if (payment) {
@@ -114,6 +115,48 @@ export const startCronJobs = () => {
             });
           }
         }
+      } 
+
+      // 4. SCHEDULE REQUEST: Auto-Expire after 7 days
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const expiredRequests =
+        await requestRepo.findExpiredRequests(sevenDaysAgo);
+
+      const expiredOverallStatusId = getStatusId("EXPIRED", "SCHEDULE_REQUEST");
+      const rejectedDayStatusId = getStatusId("REJECTED", "SCHEDULE_DAY");
+
+      for (const req of expiredRequests) {
+        req.requestedChanges.forEach((day) => {
+          day.statusId = rejectedDayStatusId;
+        });
+        req.overallStatusId = expiredOverallStatusId;
+        await req.save();
+      }
+
+      // 5. SCHEDULE REQUEST: Apply Approved Changes
+      const readyRequests = await requestRepo.findReadyToApplyRequests(now);
+      const appliedOverallStatusId = getStatusId("APPLIED", "SCHEDULE_REQUEST");
+
+      for (const req of readyRequests) {
+        for (const day of req.requestedChanges) {
+          // Optimized: Status fetch ki zaroorat nahi, statusDocs se check karlo
+          const dayStatus = statusDocs.find(
+            (s) => s._id.toString() === day.statusId.toString(),
+          );
+          if (dayStatus && dayStatus.name === "APPROVED") {
+            await requestRepo.upsertBarberSchedule(req.barberProfileId, {
+              dayOfWeek: day.dayOfWeek,
+              startTime: day.startTime,
+              endTime: day.endTime,
+              breakStart: day.breakStart,
+              breakEnd: day.breakEnd,
+              isWorkingDay: day.isWorkingDay,
+              deletedAt: null,
+            });
+          }
+        }
+        req.overallStatusId = appliedOverallStatusId;
+        await req.save();
       }
     } catch (error) {
       console.error("Cron Job Error:", error);

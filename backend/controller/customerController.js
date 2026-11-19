@@ -41,13 +41,17 @@ import { getBarberAvailability } from "../services/customer/availabilityService.
 
 import { getAvailableDates as getAvailableDatesService } from "../services/customer/availableDatesService.js";
 
+
 import {
   getFavorites,
+  getFavoriteBarbers,
+  getFavoriteSalons,
   addFavoriteBranch,
   removeFavoriteBranch,
   addFavoriteBarber,
   removeFavoriteBarber,
 } from "../services/customer/favoriteService.js";
+
 
 import {
   createReview,
@@ -273,54 +277,91 @@ export const getBarberAvailableSlots = (req, res) =>
 
 // ==================== FAVORITES ====================
 
-export const getMyFavorites = (req, res) => {
+// ==================== FAVORITES ====================
+
+// API 1: Get Favourite Barbers
+export const getFavouriteBarbers = (req, res) => {
   const userId = getAuthUserId(req);
+
   if (!userId) return unauthorized(res);
 
-  return run(res, "getMyFavorites", () => getFavorites(userId));
-};
-
-export const addBranchToFavorites = (req, res) => {
-  const userId = getAuthUserId(req);
-  if (!userId) return unauthorized(res);
-
-  return run(
-    res,
-    "addBranchToFavorites",
-    () => addFavoriteBranch(userId, req.params.branchId),
-    201,
+  return run(res, "getFavouriteBarbers", () =>
+    getFavoriteBarbers(userId)
   );
 };
 
-export const removeBranchFromFavorites = (req, res) => {
-  const userId = getAuthUserId(req);
-  if (!userId) return unauthorized(res);
-
-  return run(res, "removeBranchFromFavorites", () =>
-    removeFavoriteBranch(userId, req.params.branchId),
-  );
-};
-
+// API 2: Add Favourite Barber
 export const addBarberToFavorites = (req, res) => {
   const userId = getAuthUserId(req);
+
   if (!userId) return unauthorized(res);
 
   return run(
     res,
     "addBarberToFavorites",
     () => addFavoriteBarber(userId, req.params.barberId),
-    201,
+    201
   );
 };
 
+// API 3: Remove Favourite Barber
 export const removeBarberFromFavorites = (req, res) => {
   const userId = getAuthUserId(req);
+
   if (!userId) return unauthorized(res);
 
   return run(res, "removeBarberFromFavorites", () =>
-    removeFavoriteBarber(userId, req.params.barberId),
+    removeFavoriteBarber(userId, req.params.barberId)
   );
 };
+
+// API 4: Get Favourite Salons
+export const getFavouriteSalons = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(res, "getFavouriteSalons", () =>
+    getFavoriteSalons(userId)
+  );
+};
+
+// API 5: Add Favourite Salon
+export const addBranchToFavorites = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(
+    res,
+    "addBranchToFavorites",
+    () => addFavoriteBranch(userId, req.params.branchId),
+    201
+  );
+};
+
+// API 6: Remove Favourite Salon
+export const removeBranchFromFavorites = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(res, "removeBranchFromFavorites", () =>
+    removeFavoriteBranch(userId, req.params.branchId)
+  );
+};
+
+// Existing combined favorites endpoint
+export const getMyFavorites = (req, res) => {
+  const userId = getAuthUserId(req);
+
+  if (!userId) return unauthorized(res);
+
+  return run(res, "getMyFavorites", () =>
+    getFavorites(userId)
+  );
+};
+
 
 // ==================== REVIEWS ====================
 export const createCustomerReview = (req, res) => {

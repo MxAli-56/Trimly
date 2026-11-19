@@ -47,6 +47,8 @@ import {
   checkSlotAvailability,
   getSuggestedSlots,
   getNearbySalons,
+  getFavouriteBarbers,
+  getFavouriteSalons,
 } from "../controller/customerController.js";
 
 import uploadProfilePhoto from "../middleware/uploadProfilePhoto.js";
@@ -143,18 +145,18 @@ router.get(
 router.get(
   "/barbers/:barberId/available-slots",
   authenticate,
-  getAvailableSlots
+  getAvailableSlots,
 );
 router.get(
   "/barbers/:barberId/check-slot",
   authenticate,
-  checkSlotAvailability
+  checkSlotAvailability,
 );
 
 router.get(
   "/barbers/:barberId/suggested-slots",
   authenticate,
-  getSuggestedSlots
+  getSuggestedSlots,
 );
 
 router.get("/barbers/:barberId/reviews", authenticate, getBarberReviews);
@@ -165,30 +167,85 @@ router.get("/barbers/:barberId", authenticate, getBarberDetails);
 // FAVORITES
 // ========================================
 
-router.get("/me/favorites", authenticate, getMyFavorites);
+
+// ========================================
+// FAVORITES - 6 APIs
+// ========================================
+
+// 1. Get Favourite Barbers
+router.get(
+  "/favorites/barbers",
+  authenticate,
+  getFavouriteBarbers
+);
+
+// 2. Add Favourite Barber
+router.post(
+  "/favorites/barbers/:barberId",
+  authenticate,
+  addBarberToFavorites
+);
+
+// 3. Remove Favourite Barber
+router.delete(
+  "/favorites/barbers/:barberId",
+  authenticate,
+  removeBarberFromFavorites
+);
+
+// 4. Get Favourite Salons
+router.get(
+  "/favorites/salons",
+  authenticate,
+  getFavouriteSalons
+);
+
+// 5. Add Favourite Salon
+router.post(
+  "/favorites/salons/:branchId",
+  authenticate,
+  addBranchToFavorites
+);
+
+// 6. Remove Favourite Salon
+router.delete(
+  "/favorites/salons/:branchId",
+  authenticate,
+  removeBranchFromFavorites
+);
+
+// ========================================
+// OLD ROUTES - BACKWARD COMPATIBILITY
+// ========================================
+
+router.get(
+  "/me/favorites",
+  authenticate,
+  getMyFavorites
+);
 
 router.post(
   "/me/favorites/branches/:branchId",
   authenticate,
-  addBranchToFavorites,
+  addBranchToFavorites
 );
 
 router.delete(
   "/me/favorites/branches/:branchId",
   authenticate,
-  removeBranchFromFavorites,
+  removeBranchFromFavorites
 );
 
 router.post(
   "/me/favorites/barbers/:barberId",
   authenticate,
-  addBarberToFavorites,
+  addBarberToFavorites
 );
 
 router.delete(
   "/me/favorites/barbers/:barberId",
   authenticate,
-  removeBarberFromFavorites,
+  removeBarberFromFavorites
 );
 
 // ========================================

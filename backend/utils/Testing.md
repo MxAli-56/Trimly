@@ -286,3 +286,274 @@ Booking CONFIRMED hai, par directly /complete hit karo -> 400 error "must be IN_
 Booking barber A ki hai, par barber B ke token se /start hit karo -> 404 "Booking not found" (kyunke barberId match nahi karega).
 
 Dobara /complete hit karo same booking pe -> 400 "must be IN_PROGRESS" (kyunke abhi COMPLETED hai, aur humara check sirf IN_PROGRESS allow karta hai).
+
+
+Upcoming Bookings:
+
+Method: GET
+URL: http://localhost:5000/api/bar
+ber/bookings/upcoming?page=1&limit=5
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response:
+
+json
+{
+  "success": true,
+  "data": {
+    "bookings": [
+      {
+        "_id": "...",
+        "appointmentCode": "TRM-XXXXXX",
+        "customerId": {
+          "name": "Hamza Malik",
+          "profilePhoto": "...",
+          "phone": "03001234567"
+        },
+        "bookingDate": "2026-11-16T00:00:00.000Z",
+        "startTime": "11:00",
+        "endTime": "11:45",
+        "statusId": {
+          "name": "CONFIRMED"
+        }
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 5,
+    "totalPages": 1
+  }
+}
+
+
+
+A. Appointments Tab
+
+1. Today's Appointments
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/appointments/today
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response:
+
+json
+{
+  "success": true,
+  "data": {
+    "date": "2026-11-16",
+    "total": 2,
+    "appointments": [ { "_id": "...", "customerId": { "name": "..." }, "startTime": "10:00", "statusId": { "name": "CONFIRMED" } } ]
+  }
+}
+
+2. Completed Bookings
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/bookings/completed?page=1&limit=5
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response: (Paginated list of COMPLETED bookings, similar to upcoming).
+
+
+
+B. Profile Tab
+
+3. Get My Profile
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/profile
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response:
+
+json
+{
+  "success": true,
+  "data": {
+    "_id": "barber_profile_id",
+    "userId": { "name": "Ali Barber", "email": "testbarber@trimly.com" },
+    "bio": "Professional barber with modern styling experience",
+    "specialties": ["Haircut", "Beard Trim"],
+    "isAvailable": true,
+    "avgRating": 4.7
+  }
+}
+
+
+4. Update My Profile
+
+Method: PUT
+
+URL: http://localhost:5000/api/barber/profile
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Body (JSON):
+
+json
+{
+  "bio": "I specialize in skin fades and hot towel shaves.",
+  "specialties": ["Skin Fade", "Beard Sculpting", "Hot Towel Shave"]
+}
+Expected Response: 200 OK, message: "Profile updated"
+
+
+
+C. Service Operations 
+
+5. Start Service
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/start
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response: 200 OK, message: "Service started successfully."
+
+
+
+
+6. Complete Service
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/complete
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected Response: 200 OK, message: "Service completed. Customer earned X loyalty points."
+
+
+
+
+----- Reviews & Ratings -----
+
+Test 1: Submit a Review (Positive)
+
+Pre-condition: Ek booking banao, barber se accept karwao, phir start karo, phir complete karo (/complete API).
+
+Method: POST
+
+URL: http://localhost:5000/api/reviews
+
+Headers: Authorization: Bearer <CUSTOMER_TOKEN>
+
+Body:
+
+json
+{
+  "bookingId": "YAHAN_COMPLETED_BOOKING_ID",
+  "rating": 5,
+  "comment": "Best skin fade in town!"
+}
+Expected: 201 Created.
+
+DB Check: Review collection mein data aya, aur BarberProfile mein avgRating update hua (e.g., 4.5 -> 4.6) aur ratingCount barha.
+
+Test 2: Security - Duplicate Review
+
+Method: POST
+
+URL: http://localhost:5000/api/reviews
+
+Body: Wahi bookingId jo upar use kiya.
+
+Expected: 409 Conflict -> "You have already reviewed this booking".
+
+Test 3: Security - Invalid Booking
+
+Method: POST
+
+URL: http://localhost:5000/api/reviews
+
+Body: Random bookingId daal do ya aisi booking jo CONFIRMED hai (complete nahi hui).
+
+Expected: 400 Bad Request -> "Booking not found, not completed, or doesn't belong to you".
+
+Test 4: Get Barber Reviews (Positive)
+
+Method: GET
+
+URL: http://localhost:5000/api/reviews/barber?page=1&limit=5
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected: 200 OK with reviews array and stats object.
+
+
+------No Show, Risk------
+
+Test 1: No-Show Flow
+
+Booking banao aur Confirm karwao.
+
+Method: PATCH
+
+URL: http://localhost:5000/api/bookings/<BOOKING_ID>/no-show
+
+Headers: Authorization: Bearer <BARBER_TOKEN>
+
+Expected: 200 OK. Check DB: statusId NO_SHOW ka ObjectId ho.
+
+
+
+Test 2: Risk Score Generation
+
+Ek customer ka account lo jisne abhi No-Show kiya hai (Test 1).
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/appointments/today
+
+Expected Response: Booking ke andar riskScore field aaye (e.g., "riskScore": 50).
+
+Ab us customer ko seed script se loyaltyPoints (e.g., 400) de do DB mein. Phir wapas API hit karo. Risk Score 50 se ghatega (400 points = 20 discount, Final = 30).
+
+
+Test 3: Late Cancel
+
+Booking banao aisi jo 1 ghante se kam time mein hai.
+
+Customer se /cancel endpoint hit karwao.
+
+DB mein check karo: cancelReason mein "LATE_CANCEL: ..." likha hoga.
+
+Barber appointments/today call karega toh Risk Score automatically barha hua aayega.
+
+
+
+
+-----Barber Schedule Update and Approve------
+
+1. Barber Sends Request
+
+Method: POST
+
+URL: http://localhost:5000/api/barber/schedule/send-request
+
+Body: { "schedule": [...] }
+
+
+2. Barber Views Requests
+
+Method: GET
+
+URL: http://localhost:5000/api/barber/schedule/my-requests
+
+
+3. Owner Approves/Rejects Request
+
+Method: PATCH
+
+URL: http://localhost:5000/api/owner/schedule/approve-request/<REQUEST_ID>
+
+Body: { "approvedDays": ["MONDAY"], "rejectedDays": ["TUESDAY"] }
