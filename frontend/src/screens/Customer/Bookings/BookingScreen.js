@@ -45,9 +45,15 @@ const BookingsScreen = () => {
           ? await bookingService.getUpcomingBookings(token)
           : await bookingService.getPastBookings(token);
 
-      setBookings(
-        Array.isArray(response?.bookings) ? response.bookings : []
-      );
+      const bookingList = Array.isArray(response)
+  ? response
+  : Array.isArray(response?.bookings)
+    ? response.bookings
+    : Array.isArray(response?.data?.bookings)
+      ? response.data.bookings
+      : [];
+
+setBookings(bookingList);
 
       setError('');
     } catch (err) {
@@ -95,35 +101,63 @@ const BookingsScreen = () => {
     return `${formattedHour}:${String(minute).padStart(2, '0')} ${period}`;
   };
 
-  const getStatusStyle = (status) => {
-    const normalized = String(status || '').toUpperCase();
+ const getStatusStyle = (status) => {
+  const normalized = String(status || '').toUpperCase();
 
-    if (normalized === 'CONFIRMED') {
-      return { backgroundColor: '#E6F1E9', color: '#34734A' };
-    }
+  if (['CONFIRMED', 'IN_PROGRESS'].includes(normalized)) {
+    return { backgroundColor: '#E6F1E9', color: '#34734A' };
+  }
 
-    if (normalized === 'COMPLETED') {
-      return { backgroundColor: '#E8EAF0', color: '#515B72' };
-    }
+  if (normalized === 'COMPLETED') {
+    return { backgroundColor: '#E8EAF0', color: '#515B72' };
+  }
 
-    if (normalized === 'CANCELLED' || normalized === 'REJECTED') {
-      return { backgroundColor: '#F8E8E6', color: '#B64B43' };
-    }
+  if (
+    normalized.includes('CANCELLED') ||
+    normalized === 'REJECTED' ||
+    normalized === 'NO_SHOW' ||
+    normalized === 'EXPIRED'
+  ) {
+    return { backgroundColor: '#F8E8E6', color: '#B64B43' };
+  }
 
-    return { backgroundColor: '#F5EEDF', color: '#A47A35' };
-  };
+  return { backgroundColor: '#F5EEDF', color: '#A47A35' };
+};
 
   const renderBookingCard = (booking) => {
-    const salon = booking.branchId || {};
-    const barber = booking.barberId || {};
-    const status = booking.statusId?.name || 'PENDING';
-    const statusStyle = getStatusStyle(status);
-    const services = Array.isArray(booking.services)
-      ? booking.services
-      : [];
+  const salon =
+    booking.branchId && typeof booking.branchId === 'object'
+      ? booking.branchId
+      : booking.salonId && typeof booking.salonId === 'object'
+        ? booking.salonId
+        : booking.salon || {};
 
-    return (
-      <View key={booking._id} style={styles.bookingCard}>
+  const barber =
+    booking.barberId && typeof booking.barberId === 'object'
+      ? booking.barberId
+      : booking.barber || {};
+
+  const status = String(
+    booking.status || booking.statusId?.name || 'PENDING'
+  ).toUpperCase();
+
+  const statusStyle = getStatusStyle(status);
+
+  const services = Array.isArray(booking.services)
+    ? booking.services
+    : [];
+
+  const bookingDate = booking.date || booking.bookingDate;
+
+  const barberName =
+    barber.name ||
+    barber.fullName ||
+    barber.userId?.name ||
+    booking.barberName ||
+    'Barber';
+
+  return (
+      <View key={booking._id || booking.bookingId} style={styles.bookingCard}>
         <View style={styles.cardTop}>
           <View style={styles.salonInfo}>
             <View style={styles.salonIcon}>
@@ -151,7 +185,7 @@ const BookingsScreen = () => {
             ]}
           >
             <Text style={[styles.statusText, { color: statusStyle.color }]}>
-              {status.charAt(0) + status.slice(1).toLowerCase()}
+              {status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())}
             </Text>
           </View>
         </View>
@@ -161,7 +195,7 @@ const BookingsScreen = () => {
         <View style={styles.detailRow}>
           <Ionicons name="calendar-outline" size={17} color={Colors.secondary} />
           <Text style={styles.detailText}>
-            {formatDate(booking.bookingDate)}
+            {formatDate(bookingDate)}
           </Text>
         </View>
 
@@ -176,7 +210,7 @@ const BookingsScreen = () => {
         <View style={styles.detailRow}>
           <Ionicons name="person-outline" size={17} color={Colors.secondary} />
           <Text style={styles.detailText}>
-            {barber.name || 'Barber'}
+            {barberName}
           </Text>
         </View>
 

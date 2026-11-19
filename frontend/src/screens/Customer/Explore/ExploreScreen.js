@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,28 +12,39 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import * as MapLibreGL from '@maplibre/maplibre-react-native';
+//import MapLibreGL from '@maplibre/maplibre-react-native';
+import { Map } from '@maplibre/maplibre-react-native';
 
 import Colors from '../../../constants/Colors';
 import salonService from '../../../services/salonService';
 import useAuthStore from '../../../store/useAuthStore';
 
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+
+// Karachi is the default map viewport because it is the backend's default city.
+// This is only the initial camera position, never a salon marker.
+const DEFAULT_COORDINATE = [67.0011, 24.8607];
+
 const ExploreScreen = ({ navigation }) => {
   const token = useAuthStore((state) => state.token);
+  const cameraRef = useRef(null);
 
   const [salons, setSalons] = useState([]);
   const [area, setArea] = useState('');
   const [loading, setLoading] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilter, setActiveFilter] = useState('nearby');
   const [error, setError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [selectedSalonId, setSelectedSalonId] = useState(null);
+  const [mapReady, setMapReady] = useState(false);
 
   const getErrorMessage = (err) =>
     err.response?.data?.message ||
     err.message ||
     'Something went wrong. Please try again.';
 
-  // Fetch all salons without managing the loading state.
-  // This is also used as a fallback when location is unavailable.
   const fetchAllSalonsData = useCallback(async () => {
     if (!token) {
       throw new Error('Please log in again to discover salons.');
@@ -42,7 +54,6 @@ const ExploreScreen = ({ navigation }) => {
     return Array.isArray(results) ? results : [];
   }, [token]);
 
-  // Fetch all registered salons.
   const fetchAllSalons = useCallback(async () => {
     try {
       setLoading(true);
@@ -52,6 +63,7 @@ const ExploreScreen = ({ navigation }) => {
 
       const results = await fetchAllSalonsData();
       setSalons(results);
+      setSelectedSalonId(null);
     } catch (err) {
       setSalons([]);
       setError(getErrorMessage(err));
@@ -60,8 +72,6 @@ const ExploreScreen = ({ navigation }) => {
     }
   }, [fetchAllSalonsData]);
 
-  // Fetch nearby salons, falling back to all salons if location
-  // permission is denied or the nearby request returns no results.
   const handleNearbySalons = useCallback(async () => {
     try {
       setLoading(true);
@@ -77,16 +87,25 @@ const ExploreScreen = ({ navigation }) => {
         await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
-        const allSalons = await fetchAllSalonsData();
+        setUserLocation(null);
 
+        const allSalons = await fetchAllSalonsData();
         setSalons(allSalons);
         setActiveFilter('all');
+        setSelectedSalonId(null);
         return;
       }
 
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+
+      const coordinates = [
+        location.coords.longitude,
+        location.coords.latitude,
+      ];
+
+      setUserLocation(coordinates);
 
       const results = await salonService.getNearbySalons({
         latitude: location.coords.latitude,
@@ -98,17 +117,17 @@ const ExploreScreen = ({ navigation }) => {
         setSalons(results);
       } else {
         const allSalons = await fetchAllSalonsData();
-
         setSalons(allSalons);
         setActiveFilter('all');
       }
+
+      setSelectedSalonId(null);
     } catch (err) {
-      // If nearby discovery fails, try fetching all salons.
       try {
         const allSalons = await fetchAllSalonsData();
-
         setSalons(allSalons);
         setActiveFilter('all');
+        setSelectedSalonId(null);
         setError('');
       } catch (fallbackError) {
         setSalons([]);
@@ -119,12 +138,10 @@ const ExploreScreen = ({ navigation }) => {
     }
   }, [token, fetchAllSalonsData]);
 
-  // Automatically load salons when the Explore screen opens.
   useEffect(() => {
     handleNearbySalons();
   }, [handleNearbySalons]);
 
-  // Search salons by area.
   const handleAreaSearch = async () => {
     const trimmedArea = area.trim();
 
@@ -150,6 +167,7 @@ const ExploreScreen = ({ navigation }) => {
       );
 
       setSalons(Array.isArray(results) ? results : []);
+      setSelectedSalonId(null);
     } catch (err) {
       setSalons([]);
       setError(getErrorMessage(err));
@@ -158,131 +176,141 @@ const ExploreScreen = ({ navigation }) => {
     }
   };
 
-  // Clear the area search and fetch all salons again.
   const clearSearch = () => {
     setArea('');
     fetchAllSalons();
   };
 
-  // Render an individual salon card.
-  const renderSalonCard = (salon) => {
-    const rating = Number(salon.avgRating) || 0;
-    const ratingCount = Number(salon.ratingCount) || 0;
+  const openSalonDetails = (salon) => {
+    if (!salon?._id) return;
 
-    return (
-      <Pressable
-        key={salon._id}
-        style={styles.salonCard}
-        onPress={() =>
-          navigation.navigate('SalonDetails', {
-            branchId: salon._id,
-          })
+    navigation.navigate('SalonDetails', {
+      branchId: salon._id,
+    });
+  };
+
+  // Only use the confirmed GeoJSON schema from the Branch model.
+  // GeoJSON coordinates are [longitude, latitude].
+  const getSalonCoordinates = (salon) => {
+    const coordinates = salon?.location?.coordinates;
+
+    if (
+      !Array.isArray(coordinates) ||
+      coordinates.length !== 2
+    ) {
+      return null;
+    }
+
+    const [longitude, latitude] = coordinates;
+
+    if (
+      typeof longitude !== 'number' ||
+      typeof latitude !== 'number' ||
+      !Number.isFinite(longitude) ||
+      !Number.isFinite(latitude) ||
+      longitude < -180 ||
+      longitude > 180 ||
+      latitude < -90 ||
+      latitude > 90
+    ) {
+      return null;
+    }
+
+    return coordinates;
+  };
+
+  const salonsWithCoordinates = useMemo(
+    () =>
+      salons.filter((salon) => getSalonCoordinates(salon) !== null),
+    [salons]
+  );
+
+  const mapFeatureCollection = useMemo(
+    () => ({
+      type: 'FeatureCollection',
+      features: salonsWithCoordinates.map((salon) => ({
+        type: 'Feature',
+        id: salon._id,
+        properties: {
+          id: salon._id,
+          name: salon.name || 'Salon',
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: getSalonCoordinates(salon),
+        },
+      })),
+    }),
+    [salonsWithCoordinates]
+  );
+
+  const selectedSalon = salons.find(
+    (salon) => salon._id === selectedSalonId
+  );
+
+  const selectSalon = (salon) => {
+    setSelectedSalonId(salon._id);
+
+    const coordinates = getSalonCoordinates(salon);
+
+    if (coordinates && cameraRef.current) {
+      cameraRef.current.setCamera({
+        centerCoordinate: coordinates,
+        zoomLevel: 15,
+        animationDuration: 600,
+      });
+    }
+  };
+
+  const handleMarkerPress = (event) => {
+    const feature = event?.features?.[0];
+    const salonId = feature?.properties?.id;
+
+    if (!salonId) return;
+
+    const salon = salons.find((item) => item._id === salonId);
+
+    if (salon) {
+      selectSalon(salon);
+    }
+  };
+
+  const centerOnUser = async () => {
+    try {
+      let coordinates = userLocation;
+
+      if (!coordinates) {
+        const { status } =
+          await Location.requestForegroundPermissionsAsync();
+
+        if (status !== 'granted') {
+          Alert.alert(
+            'Location permission',
+            'Allow location access to center the map on your position.'
+          );
+          return;
         }
-      >
-        <View style={styles.salonImage}>
-          <View style={styles.imagePlaceholder}>
-            <Ionicons
-              name="storefront-outline"
-              size={34}
-              color={Colors.secondary}
-            />
 
-            <Text style={styles.imagePlaceholderText}>
-              SALON IMAGE
-            </Text>
-          </View>
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
 
-          <View style={styles.imageOverlay}>
-            <View
-              style={[
-                styles.statusBadge,
-                salon.isOpen ? styles.openBadge : styles.closedBadge,
-              ]}
-            >
-              <View
-                style={[
-                  styles.statusDot,
-                  salon.isOpen ? styles.openDot : styles.closedDot,
-                ]}
-              />
+        coordinates = [
+          location.coords.longitude,
+          location.coords.latitude,
+        ];
 
-              <Text
-                style={[
-                  styles.statusText,
-                  salon.isOpen ? styles.openText : styles.closedText,
-                ]}
-              >
-                {salon.isOpen ? 'Open' : 'Closed'}
-              </Text>
-            </View>
-          </View>
-        </View>
+        setUserLocation(coordinates);
+      }
 
-        <View style={styles.salonCardContent}>
-          <View style={styles.salonTitleRow}>
-            <View style={styles.salonInfo}>
-              <Text style={styles.salonName} numberOfLines={1}>
-                {salon.name || 'Unnamed Salon'}
-              </Text>
-
-              <View style={styles.locationRow}>
-                <Ionicons
-                  name="location-outline"
-                  size={14}
-                  color={Colors.textSecondary}
-                />
-
-                <Text style={styles.salonLocation} numberOfLines={1}>
-                  {[salon.area, salon.city].filter(Boolean).join(', ')}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.ratingContainer}>
-              <Ionicons
-                name="star"
-                size={14}
-                color={Colors.secondary}
-              />
-
-              <Text style={styles.rating}>
-                {rating.toFixed(1)}
-              </Text>
-
-              <Text style={styles.ratingCount}>
-                ({ratingCount})
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.cardDivider} />
-
-          <View style={styles.cardFooter}>
-            <View style={styles.addressContainer}>
-              <Ionicons
-                name="navigate-outline"
-                size={14}
-                color={Colors.textMuted}
-              />
-
-              <Text style={styles.address} numberOfLines={1}>
-                {salon.address || 'Address unavailable'}
-              </Text>
-            </View>
-
-            <View style={styles.viewDetails}>
-              <Text style={styles.viewDetailsText}>Details</Text>
-
-              <Ionicons
-                name="arrow-forward"
-                size={14}
-                color={Colors.secondary}
-              />
-            </View>
-          </View>
-        </View>
-      </Pressable>
-    );
+      cameraRef.current?.setCamera({
+        centerCoordinate: coordinates,
+        zoomLevel: 14,
+        animationDuration: 700,
+      });
+    } catch (err) {
+      Alert.alert('Location unavailable', getErrorMessage(err));
+    }
   };
 
   const resultTitle =
@@ -290,56 +318,107 @@ const ExploreScreen = ({ navigation }) => {
       ? 'Nearby salons'
       : activeFilter === 'area'
         ? `Salons in ${area.trim()}`
-        : 'Explore salons';
+        : 'All salons';
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.brand}>TRIMLY.</Text>
+     {/* Interactive map */}
+<MapLibreGL.Map
+  style={StyleSheet.absoluteFill}
+  mapStyle={MAP_STYLE}
+  logoEnabled={false}
+  attributionEnabled
+  compassEnabled={false}
+  onDidFinishLoadingMap={() => setMapReady(true)}
+>
+  <MapLibreGL.Camera
+  ref={cameraRef}
+  initialViewState={{
+    center: DEFAULT_COORDINATE,
+    zoom: 14,
+  }}
+  trackUserLocation="default"
+/>
 
-              <Text style={styles.headerLocation}>
-                YOUR GROOMING DESTINATION
-              </Text>
-            </View>
+  <MapLibreGL.UserLocation
+    visible
+    animated
+    showsUserHeadingIndicator
+  />
 
-            <Pressable style={styles.notificationButton}>
-              <Ionicons
-                name="notifications-outline"
-                size={21}
-                color={Colors.primary}
-              />
-            </Pressable>
+  {mapFeatureCollection.features.length > 0 && (
+    <MapLibreGL.GeoJSONSource
+      id="salonMarkers"
+      data={mapFeatureCollection}
+      onPress={handleMarkerPress}
+    >
+      <MapLibreGL.CircleLayer
+        id="salonMarkerCircles"
+        style={{
+          circleRadius: [
+            'case',
+            ['==', ['get', 'id'], selectedSalonId || ''],
+            12,
+            9,
+          ],
+          circleColor: [
+            'case',
+            ['==', ['get', 'id'], selectedSalonId || ''],
+            '#C49352',
+            '#1C1815',
+          ],
+          circleStrokeWidth: 3,
+          circleStrokeColor: '#FFFFFF',
+        }}
+      />
+
+      <MapLibreGL.SymbolLayer
+        id="salonMarkerLabels"
+        style={{
+          textField: ['get', 'name'],
+          textSize: 11,
+          textColor: '#1C1815',
+          textHaloColor: '#FFFFFF',
+          textHaloWidth: 2,
+          textOffset: [0, 1.7],
+          textAllowOverlap: false,
+        }}
+      />
+    </MapLibreGL.GeoJSONSource>
+  )}
+</MapLibreGL.Map>
+      {/* Top search interface */}
+      <View style={styles.topOverlay}>
+        <View style={styles.topBar}>
+          <View style={styles.brandContainer}>
+            <Text style={styles.brand}>TRIMLY.</Text>
+            <Text style={styles.brandSubtitle}>
+              FIND YOUR STYLE
+            </Text>
           </View>
 
-          <Text style={styles.heading}>
-            Find your
-            <Text style={styles.headingAccent}> style.</Text>
-          </Text>
-
-          <Text style={styles.subtitle}>
-            Discover the best grooming experiences around you.
-          </Text>
+          <Pressable
+            style={styles.iconButton}
+            onPress={centerOnUser}
+          >
+            <Ionicons
+              name="locate-outline"
+              size={21}
+              color={Colors.primary}
+            />
+          </Pressable>
         </View>
 
-        {/* Area Search */}
         <View style={styles.searchContainer}>
           <Ionicons
-            name="location-outline"
+            name="search-outline"
             size={20}
             color={Colors.textMuted}
           />
 
           <TextInput
             style={styles.searchInput}
-            placeholder="Enter area (e.g. Gulshan-e-Iqbal)"
+            placeholder="Search salons by area..."
             placeholderTextColor={Colors.textMuted}
             value={area}
             onChangeText={setArea}
@@ -370,7 +449,6 @@ const ExploreScreen = ({ navigation }) => {
           </Pressable>
         </View>
 
-        {/* Filters */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -411,7 +489,6 @@ const ExploreScreen = ({ navigation }) => {
                   : Colors.textSecondary
               }
             />
-
             <Text
               style={[
                 styles.filterText,
@@ -439,7 +516,6 @@ const ExploreScreen = ({ navigation }) => {
                   : Colors.textSecondary
               }
             />
-
             <Text
               style={[
                 styles.filterText,
@@ -450,135 +526,269 @@ const ExploreScreen = ({ navigation }) => {
             </Text>
           </Pressable>
         </ScrollView>
+      </View>
 
-        {/* Discovery Banner */}
-        <View style={styles.discoveryBanner}>
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerEyebrow}>
-              THE TRIMLY EXPERIENCE
-            </Text>
+      {/* Floating map controls */}
+      <View style={styles.mapControls}>
+        <Pressable
+          style={styles.mapControlButton}
+          onPress={() => {
+            cameraRef.current?.setCamera({
+              zoomLevel: 15,
+              animationDuration: 400,
+            });
+          }}
+        >
+          <Ionicons
+            name="add"
+            size={23}
+            color={Colors.primary}
+          />
+        </Pressable>
 
-            <Text style={styles.bannerTitle}>
-              Your next great
-              {'\n'}look starts here.
-            </Text>
+        <View style={styles.controlDivider} />
 
-            <Text style={styles.bannerSubtitle}>
-              Find a salon that matches your style.
+        <Pressable
+          style={styles.mapControlButton}
+          onPress={() => {
+            cameraRef.current?.setCamera({
+              zoomLevel: 11,
+              animationDuration: 400,
+            });
+          }}
+        >
+          <Ionicons
+            name="remove"
+            size={23}
+            color={Colors.primary}
+          />
+        </Pressable>
+      </View>
+
+      {/* Bottom discovery panel */}
+      <View style={styles.bottomPanel}>
+        <View style={styles.panelHandle} />
+
+        <View style={styles.panelHeader}>
+          <View style={styles.panelHeadingContainer}>
+            <Text style={styles.panelEyebrow}>DISCOVER YOUR NEXT LOOK</Text>
+            <Text style={styles.panelTitle}>{resultTitle}</Text>
+            <Text style={styles.panelSubtitle}>
+              {loading
+                ? 'Finding grooming destinations...'
+                : `${salons.length} salon${salons.length === 1 ? '' : 's'} found`}
             </Text>
           </View>
 
-          <View style={styles.bannerIcon}>
+          <Pressable
+            style={styles.refreshButton}
+            onPress={
+              activeFilter === 'nearby'
+                ? handleNearbySalons
+                : activeFilter === 'area'
+                  ? handleAreaSearch
+                  : fetchAllSalons
+            }
+            disabled={loading}
+          >
             <Ionicons
-              name="cut-outline"
-              size={37}
-              color={Colors.accent}
+              name="refresh-outline"
+              size={19}
+              color={Colors.secondary}
             />
-          </View>
+          </Pressable>
         </View>
 
-        {/* Salon Results */}
-        <View style={styles.resultsSection}>
-          <View style={styles.resultsHeader}>
-            <View>
-              <Text style={styles.sectionEyebrow}>DISCOVER</Text>
-
-              <Text style={styles.sectionTitle}>
-                {resultTitle}
-              </Text>
-
-              <Text style={styles.resultsSubtitle}>
-                {salons.length > 0
-                  ? `${salons.length} salon${salons.length === 1 ? '' : 's'} found`
-                  : 'Find your perfect grooming destination'}
-              </Text>
-            </View>
-
-            {hasSearched && (
-              <Pressable
-                onPress={
-                  activeFilter === 'nearby'
-                    ? handleNearbySalons
-                    : activeFilter === 'area'
-                      ? handleAreaSearch
-                      : fetchAllSalons
-                }
-                disabled={loading}
-                style={styles.refreshButton}
-              >
+        {loading ? (
+          <View style={styles.stateContainer}>
+            <ActivityIndicator
+              size="small"
+              color={Colors.secondary}
+            />
+            <Text style={styles.stateText}>Finding salons...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.stateContainer}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={24}
+              color={Colors.error}
+            />
+            <Text style={styles.stateText}>{error}</Text>
+          </View>
+        ) : salons.length === 0 ? (
+          <View style={styles.stateContainer}>
+            <Ionicons
+              name="storefront-outline"
+              size={27}
+              color={Colors.textMuted}
+            />
+            <Text style={styles.emptyTitle}>No salons found</Text>
+            <Text style={styles.stateText}>
+              Try another area or search nearby salons.
+            </Text>
+          </View>
+        ) : (
+          <>
+            {salonsWithCoordinates.length === 0 && (
+              <View style={styles.coordinateNotice}>
                 <Ionicons
-                  name="refresh-outline"
-                  size={19}
+                  name="information-circle-outline"
+                  size={15}
                   color={Colors.secondary}
                 />
-              </Pressable>
+                <Text style={styles.coordinateNoticeText}>
+                  Salon map locations will appear when coordinates are available.
+                </Text>
+              </View>
             )}
-          </View>
 
-          {loading ? (
-            <View style={styles.stateContainer}>
-              <ActivityIndicator
-                size="large"
-                color={Colors.secondary}
-              />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.salonCards}
+            >
+              {salons.map((salon) => {
+                const isSelected = salon._id === selectedSalonId;
+                const rating = Number(salon.avgRating) || 0;
+                const ratingCount = Number(salon.ratingCount) || 0;
+                const hasCoordinates =
+                  getSalonCoordinates(salon) !== null;
 
-              <Text style={styles.stateText}>
-                Finding salons...
-              </Text>
-            </View>
-          ) : error ? (
-            <View style={styles.stateContainer}>
-              <Ionicons
-                name="alert-circle-outline"
-                size={30}
-                color={Colors.error}
-              />
+                return (
+                  <Pressable
+                    key={salon._id}
+                    style={[
+                      styles.salonCard,
+                      isSelected && styles.selectedSalonCard,
+                    ]}
+                    onPress={() => selectSalon(salon)}
+                  >
+                    <View style={styles.cardTopRow}>
+                      <View style={styles.cardIcon}>
+                        <Ionicons
+                          name="storefront-outline"
+                          size={23}
+                          color={Colors.accent}
+                        />
+                      </View>
 
-              <Text style={styles.stateTitle}>
-                Unable to load salons
-              </Text>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          salon.isOpen
+                            ? styles.openBadge
+                            : styles.closedBadge,
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.statusDot,
+                            salon.isOpen
+                              ? styles.openDot
+                              : styles.closedDot,
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.statusText,
+                            salon.isOpen
+                              ? styles.openText
+                              : styles.closedText,
+                          ]}
+                        >
+                          {salon.isOpen ? 'Open' : 'Closed'}
+                        </Text>
+                      </View>
+                    </View>
 
-              <Text style={styles.stateText}>
-                {error}
-              </Text>
-            </View>
-          ) : salons.length > 0 ? (
-            <View style={styles.salonList}>
-              {salons.map(renderSalonCard)}
-            </View>
-          ) : (
-            <View style={styles.stateContainer}>
-              <Ionicons
-                name="storefront-outline"
-                size={34}
-                color={Colors.textMuted}
-              />
+                    <Text
+                      style={styles.salonName}
+                      numberOfLines={1}
+                    >
+                      {salon.name || 'Unnamed Salon'}
+                    </Text>
 
-              <Text style={styles.stateTitle}>
-                {hasSearched ? 'No salons found' : 'Ready to explore?'}
-              </Text>
+                    <View style={styles.locationRow}>
+                      <Ionicons
+                        name="location-outline"
+                        size={13}
+                        color={Colors.textMuted}
+                      />
+                      <Text
+                        style={styles.salonLocation}
+                        numberOfLines={1}
+                      >
+                        {[salon.area, salon.city]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </Text>
+                    </View>
 
-              <Text style={styles.stateText}>
-                {hasSearched
-                  ? 'Try searching another area or finding salons nearby.'
-                  : 'Search by area or use your location to discover salons.'}
-              </Text>
+                    <View style={styles.cardBottomRow}>
+                      <View style={styles.ratingContainer}>
+                        <Ionicons
+                          name="star"
+                          size={13}
+                          color={Colors.secondary}
+                        />
+                        <Text style={styles.rating}>
+                          {rating.toFixed(1)}
+                        </Text>
+                        <Text style={styles.ratingCount}>
+                          ({ratingCount})
+                        </Text>
+                      </View>
 
-              {!hasSearched && (
-                <Pressable
-                  style={styles.emptyAction}
-                  onPress={handleNearbySalons}
-                  disabled={loading}
-                >
-                  <Text style={styles.emptyActionText}>
-                    Find salons nearby
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          )}
+                      <View style={styles.mapAvailability}>
+                        <Ionicons
+                          name={
+                            hasCoordinates
+                              ? 'location'
+                              : 'location-outline'
+                          }
+                          size={13}
+                          color={
+                            hasCoordinates
+                              ? Colors.secondary
+                              : Colors.textMuted
+                          }
+                        />
+                        <Text style={styles.mapAvailabilityText}>
+                          {hasCoordinates ? 'On map' : 'Location pending'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Pressable
+                      style={styles.detailsButton}
+                      onPress={() => openSalonDetails(salon)}
+                    >
+                      <Text style={styles.detailsButtonText}>
+                        View salon
+                      </Text>
+                      <Ionicons
+                        name="arrow-forward"
+                        size={14}
+                        color={Colors.white}
+                      />
+                    </Pressable>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </>
+        )}
+      </View>
+
+      {!mapReady && (
+        <View style={styles.mapLoading}>
+          <ActivityIndicator
+            size="small"
+            color={Colors.secondary}
+          />
         </View>
-      </ScrollView>
+      )}
     </View>
   );
 };
@@ -586,61 +796,54 @@ const ExploreScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#EAE6DF',
   },
-  content: {
-    paddingHorizontal: 20,
+
+  topOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     paddingTop: 55,
-    paddingBottom: 35,
+    paddingHorizontal: 18,
   },
-  header: {
-    marginBottom: 22,
-  },
-  headerTop: {
+  topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 27,
+    marginBottom: 17,
+  },
+  brandContainer: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 13,
+    elevation: 4,
   },
   brand: {
     color: Colors.primary,
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: '900',
-    letterSpacing: 3,
+    letterSpacing: 2.5,
   },
-  headerLocation: {
+  brandSubtitle: {
     color: Colors.textMuted,
-    fontSize: 8,
+    fontSize: 7,
     letterSpacing: 1.5,
-    marginTop: 4,
+    marginTop: 2,
   },
-  notificationButton: {
-    width: 42,
-    height: 42,
+  iconButton: {
+    width: 44,
+    height: 44,
     borderRadius: 14,
     backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
+    elevation: 4,
   },
-  heading: {
-    color: Colors.primary,
-    fontSize: 34,
-    fontWeight: '800',
-    letterSpacing: -1.2,
-  },
-  headingAccent: {
-    color: Colors.secondary,
-  },
-  subtitle: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 20,
-    marginTop: 7,
-  },
+
   searchContainer: {
-    minHeight: 55,
+    minHeight: 54,
     backgroundColor: Colors.surface,
     borderRadius: 15,
     borderWidth: 1,
@@ -649,7 +852,8 @@ const styles = StyleSheet.create({
     paddingRight: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 9,
+    elevation: 5,
   },
   searchInput: {
     flex: 1,
@@ -658,20 +862,22 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   searchAction: {
-    width: 42,
-    height: 42,
+    width: 41,
+    height: 41,
     borderRadius: 12,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   filters: {
-    gap: 9,
-    paddingVertical: 19,
+    gap: 8,
+    paddingTop: 13,
+    paddingBottom: 5,
   },
   filterChip: {
-    minHeight: 36,
-    paddingHorizontal: 15,
+    minHeight: 35,
+    paddingHorizontal: 14,
     borderRadius: 20,
     backgroundColor: Colors.surface,
     borderWidth: 1,
@@ -679,7 +885,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 5,
+    elevation: 3,
   },
   activeFilterChip: {
     backgroundColor: Colors.primary,
@@ -693,77 +900,78 @@ const styles = StyleSheet.create({
   activeFilterText: {
     color: Colors.white,
   },
-  discoveryBanner: {
-    minHeight: 150,
-    backgroundColor: Colors.primary,
-    borderRadius: 18,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+
+  mapControls: {
+    position: 'absolute',
+    right: 17,
+    bottom: 285,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    elevation: 5,
     overflow: 'hidden',
   },
-  bannerContent: {
-    flex: 1,
-  },
-  bannerEyebrow: {
-    color: Colors.accent,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    marginBottom: 12,
-  },
-  bannerTitle: {
-    color: Colors.white,
-    fontSize: 21,
-    lineHeight: 27,
-    fontWeight: '700',
-  },
-  bannerSubtitle: {
-    color: '#D5CDC2',
-    fontSize: 10,
-    marginTop: 8,
-  },
-  bannerIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 1,
-    borderColor: '#665640',
-    backgroundColor: '#302A23',
+  mapControlButton: {
+    width: 43,
+    height: 43,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 10,
   },
-  resultsSection: {
-    marginTop: 30,
+  controlDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginHorizontal: 9,
   },
-  resultsHeader: {
+
+  bottomPanel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    paddingTop: 10,
+    paddingBottom: 25,
+    elevation: 15,
+  },
+  panelHandle: {
+    width: 38,
+    height: 4,
+    borderRadius: 5,
+    backgroundColor: '#C8C0B5',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  panelHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 17,
+    paddingHorizontal: 19,
+    marginBottom: 14,
   },
-  sectionEyebrow: {
+  panelHeadingContainer: {
+    flex: 1,
+  },
+  panelEyebrow: {
     color: Colors.secondary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '800',
-    letterSpacing: 1.7,
-    marginBottom: 5,
+    letterSpacing: 1.5,
+    marginBottom: 4,
   },
-  sectionTitle: {
+  panelTitle: {
     color: Colors.primary,
-    fontSize: 21,
+    fontSize: 19,
     fontWeight: '800',
   },
-  resultsSubtitle: {
+  panelSubtitle: {
     color: Colors.textSecondary,
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: 10,
+    marginTop: 3,
   },
   refreshButton: {
-    width: 38,
-    height: 38,
+    width: 37,
+    height: 37,
     borderRadius: 12,
     backgroundColor: Colors.surface,
     alignItems: 'center',
@@ -771,44 +979,44 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  salonList: {
-    gap: 16,
+
+  salonCards: {
+    paddingHorizontal: 18,
+    gap: 12,
+    paddingBottom: 5,
   },
   salonCard: {
+    width: 255,
     backgroundColor: Colors.surface,
-    borderRadius: 17,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.border,
-    overflow: 'hidden',
+    padding: 14,
   },
-  salonImage: {
-    height: 145,
-    backgroundColor: '#29251F',
-    position: 'relative',
+  selectedSalonCard: {
+    borderColor: Colors.secondary,
+    borderWidth: 1.5,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  cardIcon: {
+    width: 43,
+    height: 43,
+    borderRadius: 13,
+    backgroundColor: '#302A23',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  imagePlaceholder: {
-    alignItems: 'center',
-    gap: 7,
-  },
-  imagePlaceholderText: {
-    color: '#B5A58E',
-    fontSize: 8,
-    letterSpacing: 2,
-    fontWeight: '700',
-  },
-  imageOverlay: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
     borderRadius: 20,
   },
   openBadge: {
@@ -838,21 +1046,9 @@ const styles = StyleSheet.create({
   closedText: {
     color: '#A34D43',
   },
-  salonCardContent: {
-    padding: 15,
-  },
-  salonTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  salonInfo: {
-    flex: 1,
-  },
   salonName: {
     color: Colors.primary,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
   },
   locationRow: {
@@ -864,89 +1060,95 @@ const styles = StyleSheet.create({
   salonLocation: {
     flex: 1,
     color: Colors.textSecondary,
-    fontSize: 11,
+    fontSize: 10,
+  },
+  cardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 13,
+    marginBottom: 12,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingTop: 2,
   },
   rating: {
     color: Colors.primary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
   ratingCount: {
     color: Colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
   },
-  cardDivider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: 13,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  addressContainer: {
-    flex: 1,
+  mapAvailability: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
   },
-  address: {
-    flex: 1,
+  mapAvailabilityText: {
     color: Colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
   },
-  viewDetails: {
+  detailsButton: {
+    height: 37,
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  viewDetailsText: {
-    color: Colors.secondary,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  stateContainer: {
-    minHeight: 190,
-    backgroundColor: Colors.surface,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 25,
-    gap: 10,
+    gap: 7,
   },
-  stateTitle: {
-    color: Colors.primary,
-    fontSize: 15,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  stateText: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
-  emptyAction: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 10,
-    marginTop: 5,
-  },
-  emptyActionText: {
+  detailsButtonText: {
     color: Colors.white,
     fontSize: 11,
     fontWeight: '700',
+  },
+
+  coordinateNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginHorizontal: 19,
+    marginBottom: 12,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: Colors.surface,
+  },
+  coordinateNoticeText: {
+    flex: 1,
+    color: Colors.textSecondary,
+    fontSize: 10,
+    lineHeight: 15,
+  },
+  stateContainer: {
+    minHeight: 115,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 25,
+    gap: 8,
+  },
+  emptyTitle: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  stateText: {
+    color: Colors.textSecondary,
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  mapLoading: {
+    position: 'absolute',
+    top: '48%',
+    alignSelf: 'center',
+    backgroundColor: Colors.surface,
+    padding: 12,
+    borderRadius: 14,
+    elevation: 4,
   },
 });
 
