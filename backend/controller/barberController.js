@@ -170,7 +170,7 @@ export const DeleteLeave = async (req, res) => {
 export const GetDailyTimeline = async (req, res) => {
   try {
     const userId = req.user.id;
-    const dateString = req.query.date; // e.g., ?date=2026-11-15
+    const dateString = res.locals.validatedQuery.date; // e.g., ?date=2026-11-15
 
     if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
       return res.status(400).json({
@@ -313,16 +313,23 @@ export const RequestScheduleUpdate = async (req, res) => {
         data: request,
       });
   } catch (error) {
-    if (error.message === "PENDING_REQUEST_EXISTS")
-      return res
-        .status(409)
-        .json({
-          success: false,
-          message: "You already have a pending request",
-        });
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    console.error("========== SCHEDULE REQUEST ERROR ==========");
+    console.error(error);
+    console.error("Error message:", error.message);
+    console.error("Stack:", error.stack);
+    console.error("=============================================");
+
+    if (error.message === "PENDING_REQUEST_EXISTS") {
+      return res.status(409).json({
+        success: false,
+        message: "You already have a pending request",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
 

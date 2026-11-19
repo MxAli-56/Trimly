@@ -36,25 +36,30 @@ export const validateParams = (schema) => {
   };
 };
 
-// Naya Middleware: URL ke Query strings ke liye (e.g., ?date=..., ?page=1)
+// Middleware for URL Query strings (?date=..., ?page=1)
 export const validateQuery = (schema) => {
   return (req, res, next) => {
     const { error, value } = schema.validate(req.query, {
       abortEarly: false,
       stripUnknown: true,
     });
+
     if (error) {
       const errorMessage = error.details
         .map((detail) => detail.message)
         .join(", ");
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: { code: "VALIDATION_ERROR", message: errorMessage },
-        });
+
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: errorMessage,
+        },
+      });
     }
-    req.query = value; // Validated values ko overwrite kardo
+
+    res.locals.validatedQuery = value;
+
     next();
   };
 };

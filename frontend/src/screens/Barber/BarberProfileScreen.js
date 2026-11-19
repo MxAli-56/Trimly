@@ -221,7 +221,9 @@ export default function BarberProfileScreen({ navigation }) {
 
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => showComingSoon('Edit Profile')}
+            onPress={() =>
+                navigation.navigate('EditCustomerProfile')
+              }
             activeOpacity={0.85}
           >
             <Ionicons name="pencil" size={15} color={Colors.primary} />

@@ -17,6 +17,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import Colors from '../../constants/Colors';
 import useBarberAppointmentsStore from '../../store/useBarberAppointmentsStore';
+import BarberHeader from '../../components/Barber/BarberHeader';
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -383,38 +384,7 @@ export default function BarberAppointmentsScreen({ navigation }) {
       />
 
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.brandRow}>
-          <MaterialCommunityIcons
-            name="content-cut"
-            size={21}
-            color={Colors.accent}
-          />
-
-          <Text style={styles.brandTitle}>Trimly</Text>
-          <View style={styles.brandDot} />
-        </View>
-
-        <View style={styles.headerRight}>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleBadgeText}>
-              BARBER PORTAL
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.headerAvatar}
-            onPress={() => navigation.navigate('Profile')}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="person-outline"
-              size={16}
-              color={Colors.accent}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <BarberHeader navigation={navigation} />
 
       <ScrollView
         style={styles.scrollView}
