@@ -18,6 +18,7 @@ import UpdatePasswordScreen from '../screens/Auth/UpdatePasswordScreen';
 
 import Colors from '../constants/Colors';
 import LeaveModal from '../components/Barber/LeaveModal';
+import EditCustomerProfileScreen from '../screens/Customer/Profile/EditCustomerProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createNativeStackNavigator();
@@ -32,7 +33,10 @@ const BarberProfileStackNavigator = () => {
         name="BarberProfile"
         component={BarberProfileScreen}
       />
-
+      <ProfileStack.Screen
+              name="EditCustomerProfile"
+              component={EditCustomerProfileScreen}
+            />
       <ProfileStack.Screen
         name="UpdatePassword"
         component={UpdatePasswordScreen}

@@ -113,6 +113,11 @@ const useBarberStore = create((set, get) => ({
   isAvailable: true,
   dashboardLoading: false,
 
+  // Daily Timeline state
+  dailyTimeline: null,
+  timelineLoading: false,
+  timelineError: null,
+
   // Schedule state
   schedule: [],
   scheduleLoading: false,
@@ -176,7 +181,58 @@ const useBarberStore = create((set, get) => ({
       set({ dashboardLoading: false });
     }
   },
+  // GET /api/barber/dashboard/timeline?date=YYYY-MM-DD
+  fetchDailyTimeline: async (date = getLocalDateString()) => {
+    const token = useAuthStore.getState().token;
 
+    if (!token) {
+      return {
+        success: false,
+        error: 'Authentication token not found.',
+      };
+    }
+
+    set({
+      timelineLoading: true,
+      timelineError: null,
+    });
+
+    try {
+      const res = await barberService.getDailyTimeline(
+        date,
+        token
+      );
+
+      const timelineData = res.data;
+
+      set({
+        dailyTimeline: timelineData,
+      });
+
+      return {
+        success: true,
+        data: timelineData,
+      };
+    } catch (error) {
+      const message = getError(
+        error,
+        'Unable to load daily timeline.'
+      );
+
+      set({
+        timelineError: message,
+      });
+
+      return {
+        success: false,
+        error: message,
+      };
+    } finally {
+      set({
+        timelineLoading: false,
+      });
+    }
+  },
   // PATCH /api/barber/availability
   toggleAvailability: async (value) => {
     const token = useAuthStore.getState().token;
@@ -526,7 +582,9 @@ const useBarberStore = create((set, get) => ({
       stats: EMPTY_STATS,
       isAvailable: true,
       dashboardLoading: false,
-
+      dailyTimeline: null,
+      timelineLoading: false,
+      timelineError: null,
       schedule: [],
       scheduleLoading: false,
       scheduleError: null,

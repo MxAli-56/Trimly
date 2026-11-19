@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import Colors from '../../constants/Colors';
 import useBarberStore from '../../store/useBarberStore';
+import BarberHeader from '../../components/Barber/BarberHeader';
 
 // Week days
 const WEEK_DAYS = [
@@ -74,7 +75,35 @@ const formatHours = (minutes) => {
     ? `${hours}h`
     : `${hours.toFixed(1)}h`;
 };
+const formatRequestDate = (date) => {
+  if (!date) return 'Not available';
 
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return 'Not available';
+  }
+
+  return parsedDate.toLocaleDateString('en-PK', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+const getRequestStatus = (request) => {
+  const status =
+    request.overallStatusId?.name ||
+    request.overallStatus?.name ||
+    request.status?.name ||
+    request.status ||
+    'PENDING';
+
+  return String(status)
+    .replaceAll('_', ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
 const BarberScheduleScreen = ({ navigation }) => {
   const {
     schedule,
@@ -87,6 +116,9 @@ const BarberScheduleScreen = ({ navigation }) => {
     submitScheduleRequest,
     clearScheduleError,
     clearScheduleRequestError,
+    scheduleRequests,
+    scheduleRequestsLoading,
+    fetchScheduleRequests,
   } = useBarberStore();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -108,6 +140,7 @@ const BarberScheduleScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchSchedule();
+    fetchScheduleRequests();
   }, []);
 
   // Map schedule records by weekday
@@ -137,7 +170,12 @@ const BarberScheduleScreen = ({ navigation }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchSchedule();
+
+    await Promise.all([
+      fetchSchedule(),
+      fetchScheduleRequests(),
+    ]);
+
     setRefreshing(false);
   };
 
@@ -284,7 +322,7 @@ const BarberScheduleScreen = ({ navigation }) => {
               Alert.alert(
                 'Request Submitted',
                 result.message ||
-                  'Your schedule request has been sent to the salon owner.'
+                'Your schedule request has been sent to the salon owner.'
               );
             } else {
               Alert.alert(
@@ -301,7 +339,127 @@ const BarberScheduleScreen = ({ navigation }) => {
   const handleAddLeave = () => {
     navigation.navigate('LeaveModal');
   };
+  const renderRequestHistory = () => {
+    return (
+      <View style={styles.historySection}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>
+              Schedule Request History
+            </Text>
 
+            <Text style={styles.sectionSubtitle}>
+              Track your submitted schedule changes
+            </Text>
+          </View>
+        </View>
+
+        {scheduleRequestsLoading ? (
+          <ActivityIndicator
+            size="small"
+            color={Colors.secondary}
+          />
+        ) : scheduleRequests.length === 0 ? (
+          <View style={styles.emptyHistory}>
+            <Ionicons
+              name="document-text-outline"
+              size={28}
+              color={Colors.textMuted}
+            />
+
+            <Text style={styles.emptyHistoryTitle}>
+              No Requests Yet
+            </Text>
+
+            <Text style={styles.emptyHistoryText}>
+              Your submitted schedule requests will appear here.
+            </Text>
+          </View>
+        ) : (
+          scheduleRequests.map((request) => {
+            const status = getRequestStatus(request);
+            const changes = Array.isArray(request.requestedChanges)
+              ? request.requestedChanges
+              : [];
+
+            return (
+              <View
+                key={request._id}
+                style={styles.historyCard}
+              >
+                <View style={styles.historyTopRow}>
+                  <View style={styles.historyIcon}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={19}
+                      color={Colors.secondary}
+                    />
+                  </View>
+
+                  <View style={styles.historyTitleContainer}>
+                    <Text style={styles.historyTitle}>
+                      Schedule Change Request
+                    </Text>
+
+                    <Text style={styles.historyDate}>
+                      Submitted: {formatRequestDate(request.createdAt)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.historyStatus}>
+                    <Text style={styles.historyStatusText}>
+                      {status}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.historyDivider} />
+
+                <Text style={styles.historyLabel}>
+                  Requested Changes
+                </Text>
+
+                {changes.length > 0 ? (
+                  changes.map((day, index) => (
+                    <View
+                      key={`${request._id}-${day.dayOfWeek}-${index}`}
+                      style={styles.historyDayRow}
+                    >
+                      <Text style={styles.historyDayName}>
+                        {formatDay(day.dayOfWeek || '')}
+                      </Text>
+
+                      <Text style={styles.historyDayTime}>
+                        {day.isWorkingDay
+                          ? `${formatTime(day.startTime)} - ${formatTime(day.endTime)}`
+                          : 'Day Off'}
+                      </Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.historyEmptyChanges}>
+                    No change details available.
+                  </Text>
+                )}
+
+                <View style={styles.effectiveDateRow}>
+                  <Ionicons
+                    name="time-outline"
+                    size={15}
+                    color={Colors.textMuted}
+                  />
+
+                  <Text style={styles.effectiveDateText}>
+                    Effective date: {formatRequestDate(request.effectiveDate)}
+                  </Text>
+                </View>
+              </View>
+            );
+          })
+        )}
+      </View>
+    );
+  };
   const renderScheduleCard = (dayName) => {
     const day = scheduleMap[dayName];
 
@@ -441,34 +599,7 @@ const BarberScheduleScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.brandContainer}>
-          <View style={styles.logoIcon}>
-            <Ionicons
-              name="cut-outline"
-              size={23}
-              color={Colors.accent}
-            />
-          </View>
-
-          <View>
-            <Text style={styles.brandName}>TRIMLY</Text>
-            <Text style={styles.portalText}>BARBER PORTAL</Text>
-          </View>
-        </View>
-
-        <Pressable
-          style={styles.profileButton}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <Ionicons
-            name="person-outline"
-            size={21}
-            color={Colors.textLight}
-          />
-        </Pressable>
-      </View>
+      <BarberHeader navigation={navigation} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -599,7 +730,7 @@ const BarberScheduleScreen = ({ navigation }) => {
               style={[
                 styles.submitButton,
                 scheduleRequestSubmitting &&
-                  styles.disabledButton,
+                styles.disabledButton,
               ]}
               onPress={handleSubmitRequest}
               disabled={scheduleRequestSubmitting}
@@ -621,7 +752,7 @@ const BarberScheduleScreen = ({ navigation }) => {
             </Pressable>
           </View>
         )}
-
+        {renderRequestHistory()}
         {scheduleRequestError && (
           <Text style={styles.errorText}>
             {scheduleRequestError}
@@ -1394,6 +1525,134 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     color: Colors.textMuted,
     marginTop: 12,
+  },
+  // Schedule request history
+  historySection: {
+    marginTop: 22,
+    marginBottom: 10,
+  },
+
+  historyCard: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 12,
+  },
+
+  historyTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  historyIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: Colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  historyTitleContainer: {
+    flex: 1,
+    marginLeft: 10,
+  },
+
+  historyTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.text,
+  },
+
+  historyDate: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    marginTop: 4,
+  },
+
+  historyStatus: {
+    backgroundColor: Colors.surfaceSecondary,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 7,
+  },
+
+  historyStatusText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.secondary,
+  },
+
+  historyDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 14,
+  },
+
+  historyLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.textSecondary,
+    marginBottom: 9,
+  },
+
+  historyDayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 7,
+  },
+
+  historyDayName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+
+  historyDayTime: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
+
+  historyEmptyChanges: {
+    fontSize: 11,
+    color: Colors.textMuted,
+  },
+
+  effectiveDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+  },
+
+  effectiveDateText: {
+    fontSize: 10,
+    color: Colors.textMuted,
+  },
+
+  emptyHistory: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 15,
+    padding: 22,
+    alignItems: 'center',
+  },
+
+  emptyHistoryTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.text,
+    marginTop: 9,
+  },
+
+  emptyHistoryText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginTop: 5,
   },
 });
 
