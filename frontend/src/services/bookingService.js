@@ -2,7 +2,7 @@
 import api from './api';
 
 const bookingService = {
-  // Booking flow: get barbers for a salon
+  // Get barbers for a salon
   getSalonBarbers: async (branchId, token) => {
     const response = await api.get(
       `/api/customer/salons/${branchId}/barbers`,
@@ -14,7 +14,7 @@ const bookingService = {
     return response.data.data;
   },
 
-  // Booking flow: get available dates
+  // Get available dates
   getAvailableDates: async (barberId, serviceId, token) => {
     const response = await api.get(
       `/api/customer/barbers/${barberId}/available-dates`,
@@ -27,7 +27,7 @@ const bookingService = {
     return response.data.data;
   },
 
-  // Booking flow: get available time slots
+  // Get available time slots
   getAvailableSlots: async (barberId, date, serviceId, token) => {
     const response = await api.get(
       `/api/customer/barbers/${barberId}/available-slots`,
@@ -40,7 +40,20 @@ const bookingService = {
     return response.data.data;
   },
 
-  // Bookings tab: get upcoming bookings
+  // Create a booking with multiple services
+  createBooking: async (bookingData, token) => {
+    const response = await api.post(
+      '/api/bookings',
+      bookingData,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    return response.data;
+  },
+
+  // Get upcoming bookings
   getUpcomingBookings: async (token, page = 1, limit = 10) => {
     const response = await api.get('/api/bookings/upcoming', {
       params: { page, limit },
@@ -50,7 +63,7 @@ const bookingService = {
     return response.data.data;
   },
 
-  // Bookings tab: get past bookings
+  // Get past bookings
   getPastBookings: async (token, page = 1, limit = 10) => {
     const response = await api.get('/api/bookings/past', {
       params: { page, limit },

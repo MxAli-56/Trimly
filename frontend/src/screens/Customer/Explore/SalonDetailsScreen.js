@@ -16,7 +16,7 @@ import salonService from '../../../services/salonService';
 import useAuthStore from '../../../store/useAuthStore';
 
 const SalonDetailsScreen = ({ navigation, route }) => {
-  const { branchId } = route.params;
+  const { branchId } = route.params || {};
   const token = useAuthStore((state) => state.token);
 
   const [salon, setSalon] = useState(null);
@@ -26,32 +26,50 @@ const SalonDetailsScreen = ({ navigation, route }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-  if (!token || !branchId) return;
     let isMounted = true;
 
     const fetchSalonData = async () => {
+      if (!branchId || !token) {
+        setError(
+          !branchId
+            ? 'Salon information is missing.'
+            : 'Please sign in to view salon details.'
+        );
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError('');
+        setSelectedServices([]);
 
         const [salonData, serviceData] = await Promise.all([
-  salonService.getSalonDetails(branchId, token),
-  salonService.getSalonServices(branchId, token),
-]);
+          salonService.getSalonDetails(branchId, token),
+          salonService.getSalonServices(branchId, token),
+        ]);
+
         if (!isMounted) return;
 
         setSalon(salonData);
-        setServices(Array.isArray(serviceData) ? serviceData : []);
+
+        setServices(
+          Array.isArray(serviceData)
+            ? serviceData.filter((service) => service.isActive === true)
+            : []
+        );
       } catch (err) {
         if (!isMounted) return;
 
         setError(
           err.response?.data?.message ||
-          err.message ||
-          'Unable to load salon details.'
+            err.message ||
+            'Unable to load salon details.'
         );
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -72,6 +90,7 @@ const SalonDetailsScreen = ({ navigation, route }) => {
       }
 
       groups[category].push(service);
+
       return groups;
     }, {});
   }, [services]);
@@ -95,7 +114,9 @@ const SalonDetailsScreen = ({ navigation, route }) => {
       );
 
       if (alreadySelected) {
-        return current.filter((item) => item._id !== service._id);
+        return current.filter(
+          (item) => item._id !== service._id
+        );
       }
 
       return [...current, service];
@@ -103,27 +124,33 @@ const SalonDetailsScreen = ({ navigation, route }) => {
   };
 
   const handleContinue = () => {
-  if (selectedServices.length === 0) {
-    Alert.alert(
-      'Select a service',
-      'Please select at least one service to continue.'
-    );
-    return;
-  }
+    if (selectedServices.length === 0) {
+      Alert.alert(
+        'Select a service',
+        'Please select at least one service to continue.'
+      );
+      return;
+    }
 
-  navigation.navigate('BookingDetails', {
-    branchId,
-    salon,
-    selectedServices,
-    totalAmount: selectedTotal,
-    totalDuration: selectedDuration,
-  });
-};
+    navigation.navigate('BookingDetails', {
+      branchId,
+      salon,
+      selectedServices,
+      totalAmount: selectedTotal,
+      totalDuration: selectedDuration,
+    });
+  };
+
   if (loading) {
     return (
       <View style={styles.centerState}>
-        <ActivityIndicator size="large" color={Colors.secondary} />
-        <Text style={styles.stateText}>Loading salon details...</Text>
+        <ActivityIndicator
+          size="large"
+          color={Colors.secondary}
+        />
+        <Text style={styles.stateText}>
+          Loading salon details...
+        </Text>
       </View>
     );
   }
@@ -136,7 +163,11 @@ const SalonDetailsScreen = ({ navigation, route }) => {
           size={36}
           color={Colors.error}
         />
-        <Text style={styles.stateTitle}>Unable to load salon</Text>
+
+        <Text style={styles.stateTitle}>
+          Unable to load salon
+        </Text>
+
         <Text style={styles.stateText}>
           {error || 'Salon information is unavailable.'}
         </Text>
@@ -145,7 +176,9 @@ const SalonDetailsScreen = ({ navigation, route }) => {
           style={styles.retryButton}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.retryButtonText}>Go back</Text>
+          <Text style={styles.retryButtonText}>
+            Go back
+          </Text>
         </Pressable>
       </View>
     );
@@ -178,41 +211,56 @@ const SalonDetailsScreen = ({ navigation, route }) => {
               size={48}
               color={Colors.accent}
             />
+
             <Text style={styles.heroPlaceholderText}>
               SALON PHOTOGRAPHY
             </Text>
           </View>
 
           <View style={styles.heroLabel}>
-            <Text style={styles.heroLabelText}>TRIMLY DISCOVERY</Text>
+            <Text style={styles.heroLabelText}>
+              TRIMLY DISCOVERY
+            </Text>
           </View>
         </View>
 
         <View style={styles.salonInfo}>
           <View style={styles.nameRow}>
             <View style={styles.nameContainer}>
-              <Text style={styles.salonName}>{salon.name}</Text>
+              <Text style={styles.salonName}>
+                {salon.name}
+              </Text>
+
               <Text style={styles.salonLocation}>
-                {[salon.area, salon.city].filter(Boolean).join(', ')}
+                {[salon.area, salon.city]
+                  .filter(Boolean)
+                  .join(', ')}
               </Text>
             </View>
 
             <View
               style={[
                 styles.statusBadge,
-                salon.isOpen ? styles.openBadge : styles.closedBadge,
+                salon.isOpen
+                  ? styles.openBadge
+                  : styles.closedBadge,
               ]}
             >
               <View
                 style={[
                   styles.statusDot,
-                  salon.isOpen ? styles.openDot : styles.closedDot,
+                  salon.isOpen
+                    ? styles.openDot
+                    : styles.closedDot,
                 ]}
               />
+
               <Text
                 style={[
                   styles.statusText,
-                  salon.isOpen ? styles.openText : styles.closedText,
+                  salon.isOpen
+                    ? styles.openText
+                    : styles.closedText,
                 ]}
               >
                 {salon.isOpen ? 'Open' : 'Closed'}
@@ -222,7 +270,12 @@ const SalonDetailsScreen = ({ navigation, route }) => {
 
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
-              <Ionicons name="star" size={15} color={Colors.secondary} />
+              <Ionicons
+                name="star"
+                size={15}
+                color={Colors.secondary}
+              />
+
               <Text style={styles.metaText}>
                 {rating.toFixed(1)} ({ratingCount} reviews)
               </Text>
@@ -234,7 +287,11 @@ const SalonDetailsScreen = ({ navigation, route }) => {
                 size={15}
                 color={Colors.textSecondary}
               />
-              <Text style={styles.metaText} numberOfLines={1}>
+
+              <Text
+                style={styles.metaText}
+                numberOfLines={1}
+              >
                 {salon.address || 'Address unavailable'}
               </Text>
             </View>
@@ -252,8 +309,14 @@ const SalonDetailsScreen = ({ navigation, route }) => {
         <View style={styles.servicesSection}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionEyebrow}>THE MENU</Text>
-              <Text style={styles.sectionTitle}>Select your services</Text>
+              <Text style={styles.sectionEyebrow}>
+                THE MENU
+              </Text>
+
+              <Text style={styles.sectionTitle}>
+                Select your services
+              </Text>
+
               <Text style={styles.sectionSubtitle}>
                 Choose one or more services for your visit.
               </Text>
@@ -273,90 +336,111 @@ const SalonDetailsScreen = ({ navigation, route }) => {
                 size={30}
                 color={Colors.textMuted}
               />
+
               <Text style={styles.emptyTitle}>
                 No services available
               </Text>
+
               <Text style={styles.emptyText}>
                 This salon hasn't listed any active services yet.
               </Text>
             </View>
           ) : (
-            Object.entries(groupedServices).map(([category, items]) => (
-              <View key={category} style={styles.categorySection}>
-                <Text style={styles.categoryTitle}>{category}</Text>
+            Object.entries(groupedServices).map(
+              ([category, items]) => (
+                <View
+                  key={category}
+                  style={styles.categorySection}
+                >
+                  <Text style={styles.categoryTitle}>
+                    {category}
+                  </Text>
 
-                {items.map((service) => {
-                  const isSelected = selectedServices.some(
-                    (item) => item._id === service._id
-                  );
+                  {items.map((service) => {
+                    const isSelected = selectedServices.some(
+                      (item) => item._id === service._id
+                    );
 
-                  return (
-                    <Pressable
-                      key={service._id}
-                      style={[
-                        styles.serviceCard,
-                        isSelected && styles.selectedServiceCard,
-                      ]}
-                      onPress={() => toggleService(service)}
-                    >
-                      <View style={styles.serviceInfo}>
-                        <Text style={styles.serviceName}>
-                          {service.name}
-                        </Text>
-
-                        {service.description ? (
-                          <Text style={styles.serviceDescription}>
-                            {service.description}
+                    return (
+                      <Pressable
+                        key={service._id}
+                        style={[
+                          styles.serviceCard,
+                          isSelected &&
+                            styles.selectedServiceCard,
+                        ]}
+                        onPress={() => toggleService(service)}
+                      >
+                        <View style={styles.serviceInfo}>
+                          <Text style={styles.serviceName}>
+                            {service.name}
                           </Text>
-                        ) : null}
 
-                        <View style={styles.durationRow}>
-                          <Ionicons
-                            name="time-outline"
-                            size={13}
-                            color={Colors.textMuted}
-                          />
-                          <Text style={styles.durationText}>
-                            {service.durationMinutes || 0} min
-                          </Text>
-                        </View>
-                      </View>
+                          {service.description ? (
+                            <Text
+                              style={styles.serviceDescription}
+                            >
+                              {service.description}
+                            </Text>
+                          ) : null}
 
-                      <View style={styles.serviceRight}>
-                        <Text style={styles.servicePrice}>
-                          Rs. {Number(service.price || 0).toLocaleString()}
-                        </Text>
-
-                        <View
-                          style={[
-                            styles.selectionCircle,
-                            isSelected && styles.selectionCircleActive,
-                          ]}
-                        >
-                          {isSelected && (
+                          <View style={styles.durationRow}>
                             <Ionicons
-                              name="checkmark"
-                              size={14}
-                              color={Colors.white}
+                              name="time-outline"
+                              size={13}
+                              color={Colors.textMuted}
                             />
-                          )}
+
+                            <Text style={styles.durationText}>
+                              {service.durationMinutes || 0} min
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ))
+
+                        <View style={styles.serviceRight}>
+                          <Text style={styles.servicePrice}>
+                            Rs.{' '}
+                            {Number(
+                              service.price || 0
+                            ).toLocaleString()}
+                          </Text>
+
+                          <View
+                            style={[
+                              styles.selectionCircle,
+                              isSelected &&
+                                styles.selectionCircleActive,
+                            ]}
+                          >
+                            {isSelected && (
+                              <Ionicons
+                                name="checkmark"
+                                size={14}
+                                color={Colors.white}
+                              />
+                            )}
+                          </View>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )
+            )
           )}
         </View>
       </ScrollView>
 
       <View style={styles.bottomBar}>
         <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>ESTIMATED TOTAL</Text>
+          <Text style={styles.totalLabel}>
+            ESTIMATED TOTAL
+          </Text>
+
           <Text style={styles.totalPrice}>
             Rs. {selectedTotal.toLocaleString()}
           </Text>
+
           <Text style={styles.totalDuration}>
             {selectedDuration} minutes · {selectedServices.length} services
           </Text>
@@ -365,11 +449,16 @@ const SalonDetailsScreen = ({ navigation, route }) => {
         <Pressable
           style={[
             styles.continueButton,
-            selectedServices.length === 0 && styles.continueButtonDisabled,
+            selectedServices.length === 0 &&
+              styles.continueButtonDisabled,
           ]}
           onPress={handleContinue}
+          disabled={selectedServices.length === 0}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
+          <Text style={styles.continueButtonText}>
+            Continue
+          </Text>
+
           <Ionicons
             name="arrow-forward"
             size={17}

@@ -2,6 +2,14 @@
 import api from './api';
 
 const salonService = {
+  getSalons: async (token) => {
+    const response = await api.get('/api/customer/salons', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    return response.data.data;
+  },
+
   getNearbySalons: async ({ latitude, longitude, radius = 5 }) => {
     const response = await api.get('/api/customer/salons/nearby', {
       params: { latitude, longitude, radius },
@@ -29,12 +37,9 @@ const salonService = {
   },
 
   getSalonDetails: async (branchId, token) => {
-    const response = await api.get(
-      `/api/customer/salons/${branchId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const response = await api.get(`/api/customer/salons/${branchId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
     return response.data.data;
   },

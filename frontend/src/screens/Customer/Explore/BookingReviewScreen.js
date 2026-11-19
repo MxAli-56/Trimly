@@ -1,6 +1,6 @@
 
-import React, { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -8,48 +8,56 @@ import {
   Text,
   View,
 } from 'react-native';
+
+import bookingService from '../../../services/bookingService';
+import useAuthStore from '../../../store/useAuthStore';
 import { Ionicons } from '@expo/vector-icons';
 
 import Colors from '../../../constants/Colors';
 
 const BookingReviewScreen = ({ navigation, route }) => {
   const {
-    branchId,
-    salon,
-    selectedServices: initialServices,
-    selectedBarber,
-    selectedDate,
-    selectedSlot,
-  } = route.params;
+  branchId,
+  salon,
+  selectedServices: initialServices,
+  selectedBarber,
+  selectedDate,
+  selectedSlot,
+} = route.params;
 
-  const [selectedServices, setSelectedServices] = useState(
-    initialServices || []
+const [selectedServices, setSelectedServices] = useState(
+  Array.isArray(initialServices) ? initialServices : []
+);
+const token = useAuthStore((state) => state.token);
+
+const [isSubmitting, setIsSubmitting] = useState(false);
+const totalAmount = useMemo(
+  () =>
+    selectedServices.reduce(
+      (total, service) => total + Number(service.price || 0),
+      0
+    ),
+  [selectedServices]
+);
+
+const totalDuration = useMemo(
+  () =>
+    selectedServices.reduce(
+      (total, service) =>
+        total + Number(service.durationMinutes || 0),
+      0
+    ),
+  [selectedServices]
+);
+
+const removeService = (serviceId) => {
+  setSelectedServices((current) =>
+    current.filter(
+      (service) =>
+        (service._id || service.id) !== serviceId
+    )
   );
-
-  const totalAmount = useMemo(
-    () =>
-      selectedServices.reduce(
-        (total, service) => total + Number(service.price || 0),
-        0
-      ),
-    [selectedServices]
-  );
-
-  const totalDuration = useMemo(
-    () =>
-      selectedServices.reduce(
-        (total, service) =>
-          total + Number(service.durationMinutes || 0),
-        0
-      ),
-    [selectedServices]
-  );
-
-  const removeService = (serviceId) => {
-    setSelectedServices((current) =>
-      current.filter((service) => service._id !== serviceId)
-    );
-  };
+};
 
   const formatDate = (dateString) => {
     const date = new Date(`${dateString}T00:00:00Z`);
@@ -69,21 +77,89 @@ const BookingReviewScreen = ({ navigation, route }) => {
     selectedBarber?.userId?.name ||
     'Selected barber';
 
-  const handleConfirmBooking = () => {
-    if (selectedServices.length === 0) {
-      Alert.alert(
-        'No services selected',
-        'Please go back and select at least one service.'
-      );
-      return;
-    }
+ const handleConfirmBooking = async () => {
+  if (!token) {
+    Alert.alert('Session expired', 'Please log in again.');
+    return;
+  }
 
-    // Booking creation will be connected to the existing
-    // backend booking API once its exact contract is verified.
+  const barberProfileId =
+    selectedBarber?.barberProfileId || selectedBarber?._id;
+
+  if (!barberProfileId) {
+    Alert.alert('Barber unavailable', 'Please select a barber again.');
+    return;
+  }
+
+  if (!selectedDate || !selectedSlot?.startTime) {
     Alert.alert(
-      'Ready to confirm',
-      'Your booking details are ready. Booking confirmation will be connected to the booking API next.'
+      'Incomplete booking',
+      'Please select your appointment date and time.'
     );
+    return;
+  }
+
+  const serviceIds = selectedServices
+    .map((service) => service._id || service.id)
+    .filter(Boolean);
+
+  if (serviceIds.length !== selectedServices.length || serviceIds.length === 0) {
+    Alert.alert(
+      'Invalid services',
+      'Some selected services are missing their IDs. Please review your selection.'
+    );
+    return;
+  }
+
+  const bookingData = {
+    barberProfileId,
+    serviceIds,
+    date: selectedDate,
+    startTime: selectedSlot.startTime,
+  };
+
+  try {
+    setIsSubmitting(true);
+
+    const response = await bookingService.createBooking(
+      bookingData,
+      token
+    );
+
+    const booking = response?.data || response;
+
+    Alert.alert(
+      'Booking requested!',
+      `${response?.message || 'Your booking request has been submitted.'}\n\nAppointment code: ${
+        booking?.appointmentCode || 'Pending'
+      }\n\nStatus: ${
+        booking?.status || 'PENDING'
+      }\n\nThe barber has 2 minutes to accept your request.`,
+      [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]
+    );
+  } catch (error) {
+    const statusCode = error.response?.status;
+
+    const message =
+      error.response?.data?.message ||
+      'Unable to submit your booking. Please try again.';
+
+    if (statusCode === 409) {
+      Alert.alert(
+        'Time slot unavailable',
+        'This appointment slot is no longer available. Please go back and choose another time.'
+      );
+    } else {
+      Alert.alert('Booking failed', message);
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
   };
 
   return (
@@ -326,22 +402,29 @@ const BookingReviewScreen = ({ navigation, route }) => {
         </View>
 
         <Pressable
-          style={[
-            styles.confirmButton,
-            selectedServices.length === 0 && styles.disabledButton,
-          ]}
-          disabled={selectedServices.length === 0}
-          onPress={handleConfirmBooking}
-        >
-          <Text style={styles.confirmButtonText}>
-            Confirm booking
-          </Text>
-          <Ionicons
-            name="arrow-forward"
-            size={17}
-            color={Colors.white}
-          />
-        </Pressable>
+  style={[
+    styles.confirmButton,
+    (selectedServices.length === 0 || isSubmitting) &&
+      styles.disabledButton,
+  ]}
+  disabled={selectedServices.length === 0 || isSubmitting}
+  onPress={handleConfirmBooking}
+>
+  {isSubmitting ? (
+    <ActivityIndicator color={Colors.white} size="small" />
+  ) : (
+    <>
+      <Text style={styles.confirmButtonText}>
+        Confirm booking
+      </Text>
+      <Ionicons
+        name="arrow-forward"
+        size={17}
+        color={Colors.white}
+      />
+    </>
+  )}
+</Pressable>
       </View>
     </View>
   );

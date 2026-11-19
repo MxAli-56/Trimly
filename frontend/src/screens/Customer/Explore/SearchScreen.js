@@ -140,53 +140,28 @@ const SearchScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Ionicons
-          name="search-outline"
-          size={20}
-          color={Colors.textMuted}
-        />
+     
+<Pressable
+  style={styles.searchContainer}
+  onPress={() => navigation.navigate('Search')}
+>
+  <Ionicons
+    name="search-outline"
+    size={20}
+    color={Colors.textMuted}
+  />
 
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search salons..."
-          placeholderTextColor={Colors.textMuted}
-          value={searchText}
-          onChangeText={setSearchText}
-          onSubmitEditing={handleSearch}
-          returnKeyType="search"
-          autoFocus
-        />
+  <Text style={styles.searchInput}>
+    Search salons by name...
+  </Text>
 
-        {searchText.length > 0 && (
-          <Pressable
-            onPress={() => {
-              setSearchText('');
-              setResults([]);
-              setHasSearched(false);
-              setError('');
-            }}
-          >
-            <Ionicons
-              name="close-circle"
-              size={19}
-              color={Colors.textMuted}
-            />
-          </Pressable>
-        )}
+  <Ionicons
+    name="arrow-forward"
+    size={18}
+    color={Colors.secondary}
+  />
+</Pressable>
 
-        <Pressable
-          style={styles.searchButton}
-          onPress={handleSearch}
-          disabled={loading}
-        >
-          <Ionicons
-            name="arrow-forward"
-            size={18}
-            color={Colors.white}
-          />
-        </Pressable>
-      </View>
 
       <View style={styles.resultsHeader}>
         <Text style={styles.sectionTitle}>

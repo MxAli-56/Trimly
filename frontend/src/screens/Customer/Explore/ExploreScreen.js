@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -32,21 +31,56 @@ const ExploreScreen = ({ navigation }) => {
     err.message ||
     'Something went wrong. Please try again.';
 
-  const handleNearbySalons = async () => {
+  // Fetch all salons without managing the loading state.
+  // This is also used as a fallback when location is unavailable.
+  const fetchAllSalonsData = useCallback(async () => {
+    if (!token) {
+      throw new Error('Please log in again to discover salons.');
+    }
+
+    const results = await salonService.getSalons(token);
+    return Array.isArray(results) ? results : [];
+  }, [token]);
+
+  // Fetch all registered salons.
+  const fetchAllSalons = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      setActiveFilter('all');
+      setHasSearched(true);
+
+      const results = await fetchAllSalonsData();
+      setSalons(results);
+    } catch (err) {
+      setSalons([]);
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchAllSalonsData]);
+
+  // Fetch nearby salons, falling back to all salons if location
+  // permission is denied or the nearby request returns no results.
+  const handleNearbySalons = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
       setActiveFilter('nearby');
       setHasSearched(true);
 
+      if (!token) {
+        throw new Error('Please log in again to discover salons.');
+      }
+
       const { status } =
         await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
-        setSalons([]);
-        setError(
-          'Location permission is required to find nearby salons. You can search by area instead.'
-        );
+        const allSalons = await fetchAllSalonsData();
+
+        setSalons(allSalons);
+        setActiveFilter('all');
         return;
       }
 
@@ -60,15 +94,37 @@ const ExploreScreen = ({ navigation }) => {
         radius: 5,
       });
 
-      setSalons(Array.isArray(results) ? results : []);
+      if (Array.isArray(results) && results.length > 0) {
+        setSalons(results);
+      } else {
+        const allSalons = await fetchAllSalonsData();
+
+        setSalons(allSalons);
+        setActiveFilter('all');
+      }
     } catch (err) {
-      setSalons([]);
-      setError(getErrorMessage(err));
+      // If nearby discovery fails, try fetching all salons.
+      try {
+        const allSalons = await fetchAllSalonsData();
+
+        setSalons(allSalons);
+        setActiveFilter('all');
+        setError('');
+      } catch (fallbackError) {
+        setSalons([]);
+        setError(getErrorMessage(fallbackError));
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, fetchAllSalonsData]);
 
+  // Automatically load salons when the Explore screen opens.
+  useEffect(() => {
+    handleNearbySalons();
+  }, [handleNearbySalons]);
+
+  // Search salons by area.
   const handleAreaSearch = async () => {
     const trimmedArea = area.trim();
 
@@ -102,29 +158,27 @@ const ExploreScreen = ({ navigation }) => {
     }
   };
 
+  // Clear the area search and fetch all salons again.
   const clearSearch = () => {
     setArea('');
-    setSalons([]);
-    setError('');
-    setHasSearched(false);
-    setActiveFilter('all');
+    fetchAllSalons();
   };
 
+  // Render an individual salon card.
   const renderSalonCard = (salon) => {
     const rating = Number(salon.avgRating) || 0;
     const ratingCount = Number(salon.ratingCount) || 0;
 
     return (
       <Pressable
-  key={salon._id}
-  style={styles.salonCard}
-  onPress={() =>
-    navigation.navigate('SalonDetails', {
-      branchId: salon._id,
-    })
-  }
->
-        {/* Salon image placeholder */}
+        key={salon._id}
+        style={styles.salonCard}
+        onPress={() =>
+          navigation.navigate('SalonDetails', {
+            branchId: salon._id,
+          })
+        }
+      >
         <View style={styles.salonImage}>
           <View style={styles.imagePlaceholder}>
             <Ionicons
@@ -132,6 +186,7 @@ const ExploreScreen = ({ navigation }) => {
               size={34}
               color={Colors.secondary}
             />
+
             <Text style={styles.imagePlaceholderText}>
               SALON IMAGE
             </Text>
@@ -150,6 +205,7 @@ const ExploreScreen = ({ navigation }) => {
                   salon.isOpen ? styles.openDot : styles.closedDot,
                 ]}
               />
+
               <Text
                 style={[
                   styles.statusText,
@@ -162,7 +218,6 @@ const ExploreScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Salon information */}
         <View style={styles.salonCardContent}>
           <View style={styles.salonTitleRow}>
             <View style={styles.salonInfo}>
@@ -176,6 +231,7 @@ const ExploreScreen = ({ navigation }) => {
                   size={14}
                   color={Colors.textSecondary}
                 />
+
                 <Text style={styles.salonLocation} numberOfLines={1}>
                   {[salon.area, salon.city].filter(Boolean).join(', ')}
                 </Text>
@@ -183,10 +239,16 @@ const ExploreScreen = ({ navigation }) => {
             </View>
 
             <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={14} color={Colors.secondary} />
+              <Ionicons
+                name="star"
+                size={14}
+                color={Colors.secondary}
+              />
+
               <Text style={styles.rating}>
                 {rating.toFixed(1)}
               </Text>
+
               <Text style={styles.ratingCount}>
                 ({ratingCount})
               </Text>
@@ -202,6 +264,7 @@ const ExploreScreen = ({ navigation }) => {
                 size={14}
                 color={Colors.textMuted}
               />
+
               <Text style={styles.address} numberOfLines={1}>
                 {salon.address || 'Address unavailable'}
               </Text>
@@ -209,6 +272,7 @@ const ExploreScreen = ({ navigation }) => {
 
             <View style={styles.viewDetails}>
               <Text style={styles.viewDetailsText}>Details</Text>
+
               <Ionicons
                 name="arrow-forward"
                 size={14}
@@ -240,6 +304,7 @@ const ExploreScreen = ({ navigation }) => {
           <View style={styles.headerTop}>
             <View>
               <Text style={styles.brand}>TRIMLY.</Text>
+
               <Text style={styles.headerLocation}>
                 YOUR GROOMING DESTINATION
               </Text>
@@ -264,22 +329,23 @@ const ExploreScreen = ({ navigation }) => {
           </Text>
         </View>
 
-        {/* Search */}
+        {/* Area Search */}
         <View style={styles.searchContainer}>
           <Ionicons
-            name="search-outline"
+            name="location-outline"
             size={20}
             color={Colors.textMuted}
           />
 
           <TextInput
-  style={styles.searchInput}
-  placeholder="Search salons..."
-  placeholderTextColor={Colors.textMuted}
-  editable={false}
-  showSoftInputOnFocus={false}
-  onPressIn={() => navigation.navigate('Search')}
-/>
+            style={styles.searchInput}
+            placeholder="Enter area (e.g. Gulshan-e-Iqbal)"
+            placeholderTextColor={Colors.textMuted}
+            value={area}
+            onChangeText={setArea}
+            onSubmitEditing={handleAreaSearch}
+            returnKeyType="search"
+          />
 
           {area.length > 0 && (
             <Pressable onPress={() => setArea('')}>
@@ -304,7 +370,7 @@ const ExploreScreen = ({ navigation }) => {
           </Pressable>
         </View>
 
-        {/* Discovery filters */}
+        {/* Filters */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -316,6 +382,7 @@ const ExploreScreen = ({ navigation }) => {
               activeFilter === 'all' && styles.activeFilterChip,
             ]}
             onPress={clearSearch}
+            disabled={loading}
           >
             <Text
               style={[
@@ -344,6 +411,7 @@ const ExploreScreen = ({ navigation }) => {
                   : Colors.textSecondary
               }
             />
+
             <Text
               style={[
                 styles.filterText,
@@ -371,6 +439,7 @@ const ExploreScreen = ({ navigation }) => {
                   : Colors.textSecondary
               }
             />
+
             <Text
               style={[
                 styles.filterText,
@@ -382,16 +451,18 @@ const ExploreScreen = ({ navigation }) => {
           </Pressable>
         </ScrollView>
 
-        {/* Discovery banner */}
+        {/* Discovery Banner */}
         <View style={styles.discoveryBanner}>
           <View style={styles.bannerContent}>
             <Text style={styles.bannerEyebrow}>
               THE TRIMLY EXPERIENCE
             </Text>
+
             <Text style={styles.bannerTitle}>
               Your next great
               {'\n'}look starts here.
             </Text>
+
             <Text style={styles.bannerSubtitle}>
               Find a salon that matches your style.
             </Text>
@@ -406,16 +477,16 @@ const ExploreScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Results */}
+        {/* Salon Results */}
         <View style={styles.resultsSection}>
           <View style={styles.resultsHeader}>
             <View>
-              <Text style={styles.sectionEyebrow}>
-                DISCOVER
-              </Text>
+              <Text style={styles.sectionEyebrow}>DISCOVER</Text>
+
               <Text style={styles.sectionTitle}>
                 {resultTitle}
               </Text>
+
               <Text style={styles.resultsSubtitle}>
                 {salons.length > 0
                   ? `${salons.length} salon${salons.length === 1 ? '' : 's'} found`
@@ -428,7 +499,9 @@ const ExploreScreen = ({ navigation }) => {
                 onPress={
                   activeFilter === 'nearby'
                     ? handleNearbySalons
-                    : handleAreaSearch
+                    : activeFilter === 'area'
+                      ? handleAreaSearch
+                      : fetchAllSalons
                 }
                 disabled={loading}
                 style={styles.refreshButton}
@@ -448,6 +521,7 @@ const ExploreScreen = ({ navigation }) => {
                 size="large"
                 color={Colors.secondary}
               />
+
               <Text style={styles.stateText}>
                 Finding salons...
               </Text>
@@ -459,10 +533,14 @@ const ExploreScreen = ({ navigation }) => {
                 size={30}
                 color={Colors.error}
               />
+
               <Text style={styles.stateTitle}>
                 Unable to load salons
               </Text>
-              <Text style={styles.stateText}>{error}</Text>
+
+              <Text style={styles.stateText}>
+                {error}
+              </Text>
             </View>
           ) : salons.length > 0 ? (
             <View style={styles.salonList}>
@@ -477,9 +555,7 @@ const ExploreScreen = ({ navigation }) => {
               />
 
               <Text style={styles.stateTitle}>
-                {hasSearched
-                  ? 'No salons found'
-                  : 'Ready to explore?'}
+                {hasSearched ? 'No salons found' : 'Ready to explore?'}
               </Text>
 
               <Text style={styles.stateText}>
@@ -874,4 +950,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ExploreScreen ;
+export default ExploreScreen;
