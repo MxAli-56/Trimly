@@ -170,7 +170,7 @@ export const DeleteLeave = async (req, res) => {
 export const GetDailyTimeline = async (req, res) => {
   try {
     const userId = req.user.id;
-    const dateString = req.query.date; // e.g., ?date=2026-11-15
+    const dateString = res.locals.validatedQuery.date; // e.g., ?date=2026-11-15
 
     if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
       return res.status(400).json({
