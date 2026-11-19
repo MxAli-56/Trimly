@@ -15,12 +15,7 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-<<<<<<< HEAD
 import TodayAppointmentCard from '../../components/barber/TodayAppointmentCard';
-=======
-
-import TodayAppointmentCard from '../../components/Barber/TodayAppointmentCard';
->>>>>>> origin/main
 import Colors from '../../constants/Colors';
 import useAuthStore from '../../store/useAuthStore';
 import useBarberStore from '../../store/useBarberStore';
