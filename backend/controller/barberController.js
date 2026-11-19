@@ -313,16 +313,23 @@ export const RequestScheduleUpdate = async (req, res) => {
         data: request,
       });
   } catch (error) {
-    if (error.message === "PENDING_REQUEST_EXISTS")
-      return res
-        .status(409)
-        .json({
-          success: false,
-          message: "You already have a pending request",
-        });
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    console.error("========== SCHEDULE REQUEST ERROR ==========");
+    console.error(error);
+    console.error("Error message:", error.message);
+    console.error("Stack:", error.stack);
+    console.error("=============================================");
+
+    if (error.message === "PENDING_REQUEST_EXISTS") {
+      return res.status(409).json({
+        success: false,
+        message: "You already have a pending request",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
 

@@ -3,21 +3,46 @@ import * as requestRepo from "../../repository/scheduleUpdateRequestRepository.j
 import * as barberProfileRepository from "../../repository/barberProfileRepository.js";
 import Status from "../../model/statusModel.js";
 
+
 export const createScheduleRequest = async (userId, scheduleData) => {
   const profile = await barberProfileRepository.findProfileByUserId(userId);
-  if (!profile) throw new Error("PROFILE_NOT_FOUND");
 
-  const existing = await requestRepo.findPendingRequestByBarber(profile._id);
-  if (existing) throw new Error("PENDING_REQUEST_EXISTS");
+  if (!profile) {
+    throw new Error("PROFILE_NOT_FOUND");
+  }
+
+  console.log("Profile ID:", profile._id);
+  console.log("Current Branch ID:", profile.currentBranchId);
+
+  if (!profile.currentBranchId) {
+    throw new Error("BARBER_BRANCH_NOT_ASSIGNED");
+  }
+
+  const existing = await requestRepo.findPendingRequestByBarber(
+    profile._id
+  );
+
+  if (existing) {
+    throw new Error("PENDING_REQUEST_EXISTS");
+  }
 
   const dayStatus = await Status.findOne({
     name: "PENDING",
     type: "SCHEDULE_DAY",
   });
+
   const overallStatus = await Status.findOne({
     name: "PENDING_OWNER_APPROVAL",
     type: "SCHEDULE_REQUEST",
   });
+
+  if (!dayStatus) {
+    throw new Error("PENDING_DAY_STATUS_NOT_FOUND");
+  }
+
+  if (!overallStatus) {
+    throw new Error("PENDING_REQUEST_STATUS_NOT_FOUND");
+  }
 
   const requestedChanges = scheduleData.map((day) => ({
     ...day,
@@ -37,6 +62,7 @@ export const createScheduleRequest = async (userId, scheduleData) => {
 
   return request;
 };
+
 
 export const ownerReviewRequest = async (
   ownerUserId,
