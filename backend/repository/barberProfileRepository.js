@@ -13,7 +13,24 @@ export const findBarbersByBranchId = async (branchId) => {
     .populate("userId", "name email phone profilePhoto")
     .sort({ avgRating: -1, createdAt: -1 });
 };
-
+export const acquireBookingWriteLock = async (
+  barberProfileId,
+  session,
+) => {
+  return BarberProfile.findOneAndUpdate(
+    {
+      _id: barberProfileId,
+      deletedAt: null,
+    },
+    {
+      $inc: { bookingLockVersion: 1 },
+    },
+    {
+      new: true,
+      session,
+    },
+  ).select("_id");
+};
 export const findBarberById = async (barberId) => {
   return await BarberProfile.findOne({
     _id: barberId,

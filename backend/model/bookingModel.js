@@ -96,7 +96,12 @@ const bookingSchema = new mongoose.Schema(
 );
 
 bookingSchema.index({ customerId: 1 });
-bookingSchema.index({ barberId: 1, bookingDate: 1 });
+bookingSchema.index({
+  barberId: 1,
+  bookingDate: 1,
+  startTime: 1,
+  endTime: 1,
+});
 bookingSchema.index({ branchId: 1 });
 bookingSchema.index({ holdExpiresAt: 1 });
 

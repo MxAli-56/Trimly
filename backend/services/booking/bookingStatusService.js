@@ -11,10 +11,7 @@ const createError = (message, statusCode = 400) => {
   return error;
 };
 
-export const getBookingStatus = async (
-  userId,
-  bookingId
-) => {
+export const getBookingStatus = async (userId, bookingId) => {
   if (!mongoose.isValidObjectId(userId)) {
     throw createError("Invalid customer ID", 401);
   }
@@ -23,10 +20,7 @@ export const getBookingStatus = async (
     throw createError("Invalid booking ID");
   }
 
-  const booking = await findBookingStatusById(
-    bookingId,
-    userId
-  );
+  const booking = await findBookingStatusById(bookingId, userId);
 
   if (!booking) {
     throw createError("Booking not found", 404);
@@ -47,5 +41,6 @@ export const getBookingStatus = async (
     bookingDate: booking.bookingDate,
     startTime: booking.startTime,
     endTime: booking.endTime,
+    holdExpiresAt: booking.holdExpiresAt,
   };
 };

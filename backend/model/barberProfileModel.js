@@ -14,7 +14,11 @@ const barberProfileSchema = new mongoose.Schema(
       ref: "Branch",
       default: null,
     },
-
+    bookingLockVersion: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
     employmentHistory: [
       {
         branchId: { type: mongoose.Schema.Types.ObjectId, ref: "Branch" },
