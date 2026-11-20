@@ -11,13 +11,15 @@ import BarberProfileScreen from '../screens/Barber/BarberProfileScreen';
 import BarberDashboardScreen from '../screens/Barber/BarberDashboardScreen';
 import BarberAppointmentsScreen from '../screens/Barber/BarberAppointmentsScreen';
 import AppointmentDetailsScreen from '../screens/Barber/AppointmentDetailsScreen';
+import BookingRequestDetailsScreen from '../screens/Barber/BookingRequestDetailsScreen';
 import BarberScheduleScreen from '../screens/Barber/BarberScheduleScreen';
-
 
 import UpdatePasswordScreen from '../screens/Auth/UpdatePasswordScreen';
 
 import Colors from '../constants/Colors';
 import LeaveModal from '../components/Barber/LeaveModal';
+import LeaveModal from '../components/Barber/LeaveModal';
+import EditCustomerProfileScreen from '../screens/Customer/Profile/EditCustomerProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createNativeStackNavigator();
@@ -32,10 +34,12 @@ const BarberProfileStackNavigator = () => {
         name="BarberProfile"
         component={BarberProfileScreen}
       />
+
       <ProfileStack.Screen
-              name="EditCustomerProfile"
-              component={EditCustomerProfileScreen}
-            />
+        name="EditCustomerProfile"
+        component={EditCustomerProfileScreen}
+      />
+
       <ProfileStack.Screen
         name="UpdatePassword"
         component={UpdatePasswordScreen}
@@ -149,6 +153,11 @@ const BarberNavigator = () => {
       <RootStack.Screen
         name="BarberTabs"
         component={BarberTabNavigator}
+      />
+
+      <RootStack.Screen
+        name="BookingRequestDetails"
+        component={BookingRequestDetailsScreen}
       />
 
       <RootStack.Screen

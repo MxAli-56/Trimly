@@ -1,0 +1,77 @@
+import mongoose from "mongoose";
+import * as bookingRepository from "../../repository/bookingRepository.js";
+
+export const getBarberBookingRequestDetailsService = async (
+  barberUserId,
+  bookingId,
+) => {
+  // Validate booking ID
+  if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+    const error = new Error("Invalid booking ID");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Fetch booking belonging to the logged-in barber
+  const booking =
+    await bookingRepository.findBookingRequestDetailsByBarber(
+      bookingId,
+      barberUserId,
+    );
+
+  if (!booking) {
+    const error = new Error("Booking request not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Calculate total duration from saved service snapshots
+  const totalDuration = (booking.services || []).reduce(
+    (total, service) => total + (service.durationMinutes || 0),
+    0,
+  );
+
+  // Format booking date as YYYY-MM-DD
+  const date = booking.bookingDate
+    ? booking.bookingDate.toISOString().split("T")[0]
+    : null;
+
+  return {
+    bookingId: String(booking._id),
+    appointmentCode: booking.appointmentCode,
+
+    customer: {
+      id: String(booking.customerId._id),
+      name: booking.customerId.name,
+      profilePhoto: booking.customerId.profilePhoto || null,
+      phone: booking.customerId.phone || null,
+    },
+
+    barberId: String(booking.barberId),
+
+    branch: {
+      id: String(booking.branchId._id),
+      name: booking.branchId.name,
+      address: booking.branchId.address || null,
+    },
+
+    services: (booking.services || []).map((service) => ({
+      serviceId: service.serviceId
+        ? String(service.serviceId._id || service.serviceId)
+        : null,
+      name: service.name,
+      price: service.price,
+      durationMinutes: service.durationMinutes,
+    })),
+
+    date,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    totalDuration,
+    totalAmount: booking.totalAmount,
+    depositAmount: booking.depositAmount,
+    holdExpiresAt: booking.holdExpiresAt,
+
+    status: booking.statusId?.name || "UNKNOWN",
+  };
+};

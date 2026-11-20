@@ -43,7 +43,21 @@ export const findOverlappingBookings = async ({
     .populate("statusId", "name type")
     .lean();
 };
-
+// Fetch booking request details for the logged-in barber
+export const findBookingRequestDetailsByBarber = async (
+  bookingId,
+  barberUserId,
+) => {
+  return Booking.findOne({
+    _id: bookingId,
+    barberId: barberUserId,
+    deletedAt: null,
+  })
+    .populate("customerId", "name profilePhoto phone")
+    .populate("branchId", "name address")
+    .populate("statusId", "name type")
+    .lean();
+};
 export const findBookingStatuses = async () => {
   return Status.find({
     type: "BOOKING",
@@ -287,8 +301,8 @@ export const findBookingCancellationDetails = async (bookingId, customerId) => {
   })
     .select(
       "appointmentCode bookingDate startTime endTime " +
-        "statusId cancelReason totalAmount depositAmount " +
-        "branchId barberId updatedAt",
+      "statusId cancelReason totalAmount depositAmount " +
+      "branchId barberId updatedAt",
     )
     .populate("statusId", "name type description")
     .populate("branchId", "name address")
@@ -360,7 +374,7 @@ export const findBookingsForDate = async (barberUserId, dateStart, dateEnd) => {
     .populate("statusId", "name type")
     .lean();
 };
-
+// Create pending booking with optional MongoDB session
 export const createPendingBooking = async (
   bookingData,
   session = null,
@@ -372,24 +386,16 @@ export const createPendingBooking = async (
 
   return Booking.create(bookingData);
 };
-// Find all overlapping bookings.
-// The calling service must evaluate their statuses and active hold deadlines.
-export const findConflictingBookings = async (
-  barberUserId,
-  date,
-  startTime,
-  endTime,
-  session = null,
-) => {
-  return Booking.find({
-    barberId: barberUserId,
-    bookingDate: date,
-    deletedAt: null,
-    startTime: { $lt: endTime },
-    endTime: { $gt: startTime },
-  })
-    .populate("statusId", "name type")
-    .session(session)
+
+// Fetch booking details for Socket.IO notification
+export const findBookingNotificationById = async (bookingId) => {
+  return Booking.findById(bookingId)
+    .select(
+      "appointmentCode customerId barberId branchId services bookingDate startTime endTime totalAmount holdExpiresAt statusId"
+    )
+    .populate("customerId", "name profilePhoto")
+    .populate("branchId", "name")
+    .populate("statusId", "name")
     .lean();
 };
 

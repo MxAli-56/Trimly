@@ -26,6 +26,8 @@ import { timelineQuerySchema, paginationQuerySchema } from "../validation/barber
 import { leaveIdParamSchema } from "../validation/barber/paramsValidation.js";
 import { updateProfileSchema } from "../validation/barber/profileValidation.js";
 import { createScheduleRequestSchema } from "../validation/schedule/scheduleRequestValidation.js"; // Naya import
+import { bookingIdParamSchema } from "../validation/booking/paramValidation.js";
+import { getBarberBookingRequestDetails } from "../controller/bookingController.js";
 
 const router = express.Router();
 
@@ -56,6 +58,13 @@ router.get("/bookings/completed", validateQuery(paginationQuerySchema), GetCompl
 // Profile
 router.get("/profile", GetMyProfile);
 router.put("/profile", validateBody(updateProfileSchema), UpdateMyProfile);
+
+router.get(
+  "/booking-requests/:bookingId",
+  requiredRoles(ROLES.BARBER),
+  validateParams(bookingIdParamSchema),
+  getBarberBookingRequestDetails
+);
 
 // ==========================================
 // PHASE 4: Schedule Request (Barber sends request to Owner)

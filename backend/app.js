@@ -1,8 +1,13 @@
+
 import "./config/env.js";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import http from "http";
+
 import connectDB from "./config/db.js";
+import { initializeSocket } from "./config/socket.js";
+
 import authRoutes from "./route/authRoute.js";
 import customerRoute from "./route/customerRoute.js";
 import bookingRoute from "./route/bookingRoute.js";
@@ -11,6 +16,7 @@ import reviewRoutes from "./route/reviewRoute.js";
 import ownerRoute from "./route/ownerRoute.js";
 
 const app = express();
+const httpServer = http.createServer(app);
 
 app.use(helmet());
 app.use(cors());
@@ -34,7 +40,9 @@ app.get("/api/v1/health", (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
-  app.listen(PORT, () => {
+  initializeSocket(httpServer);
+
+  httpServer.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
   });
 });

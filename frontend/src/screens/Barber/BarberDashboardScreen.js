@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   Switch,
 } from 'react-native';
-
+import { getBarberSocket } from '../../services/barberSocket';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import TodayAppointmentCard from '../../components/Barber/TodayAppointmentCard';
@@ -123,10 +123,26 @@ export default function BarberDashboardScreen({ navigation }) {
     timelineLoading,
     timelineError,
     fetchDailyTimeline,
+
+    incomingBookingRequest,
+    setIncomingBookingRequest,
+    clearIncomingBookingRequest,
   } = useBarberStore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Update countdown every second while a request is visible
+  useEffect(() => {
+    if (!incomingBookingRequest?.holdExpiresAt) return;
+
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [incomingBookingRequest?.holdExpiresAt]);
 
   const name = user?.name || 'Barber';
   const profilePhoto = user?.profilePhoto;
@@ -144,7 +160,27 @@ export default function BarberDashboardScreen({ navigation }) {
     fetchDashboard,
     fetchDailyTimeline,
   ]);
+  // Listen for new booking requests
+  useEffect(() => {
+    const socket = getBarberSocket();
 
+    if (!socket) {
+      console.log('Barber socket is not initialized');
+      return;
+    }
+
+    const handleNewBookingRequest = (booking) => {
+      console.log('New booking request received:', booking);
+
+      setIncomingBookingRequest(booking);
+    };
+
+    socket.on('booking:new-request', handleNewBookingRequest);
+
+    return () => {
+      socket.off('booking:new-request', handleNewBookingRequest);
+    };
+  }, [setIncomingBookingRequest]);
   const onRefresh = async () => {
     setRefreshing(true);
 
@@ -253,7 +289,20 @@ export default function BarberDashboardScreen({ navigation }) {
         return styles.slotUnknown;
     }
   };
+  const getRemainingTime = (expiresAt) => {
+    const remaining = Math.max(
+      0,
+      Math.ceil((new Date(expiresAt).getTime() - currentTime) / 1000)
+    );
 
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+
+    return {
+      remaining,
+      formatted: `${minutes}:${String(seconds).padStart(2, '0')}`,
+    };
+  };
   const getTimelineTextStyle = (status) => {
     switch (status) {
       case 'AVAILABLE':
@@ -592,7 +641,114 @@ export default function BarberDashboardScreen({ navigation }) {
             </View>
           )}
         </View>
+        {/* New Booking Request Notification */}
+        {incomingBookingRequest && (() => {
+          const request = incomingBookingRequest;
 
+          const countdown = getRemainingTime(request.holdExpiresAt);
+
+          return (
+            <View style={styles.bookingRequestCard}>
+              <View style={styles.bookingRequestHeader}>
+                <View style={styles.bookingRequestIcon}>
+                  <Ionicons
+                    name="notifications"
+                    size={20}
+                    color={Colors.textGold}
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.bookingRequestTitle}>
+                    New Booking Request
+                  </Text>
+
+                  <Text style={styles.bookingRequestSubtitle}>
+                    {request.customer?.name || 'Customer'} requested an appointment
+                  </Text>
+                </View>
+
+                <View style={styles.requestPendingBadge}>
+                  <Text style={styles.requestPendingText}>
+                    PENDING
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.bookingRequestDetails}>
+                <Text style={styles.bookingRequestDetail}>
+                  Services: {(request.services || [])
+                    .map((service) => service.name)
+                    .join(', ') || 'Not available'}
+                </Text>
+
+                <Text style={styles.bookingRequestDetail}>
+                  Date: {request.date}
+                </Text>
+
+                <Text style={styles.bookingRequestDetail}>
+                  Time: {request.startTime} - {request.endTime}
+                </Text>
+
+                <Text style={styles.bookingRequestDetail}>
+                  Amount: {formatMoney(request.totalAmount)}
+                </Text>
+              </View>
+
+              <View style={styles.bookingRequestFooter}>
+                <View>
+                  <Text style={styles.countdownLabel}>
+                    TIME REMAINING
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.countdownValue,
+                      countdown.remaining === 0 && { color: '#B33A3A' },
+                    ]}
+                  >
+                    {countdown.formatted}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.reviewRequestButton}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    const bookingId = request.bookingId || request._id;
+
+                    if (!bookingId) {
+                      console.log('Booking ID missing from incoming request:', request);
+                      return;
+                    }
+
+                    navigation.navigate('BookingRequestDetails', {
+                      bookingId,
+                    });
+
+                    clearIncomingBookingRequest();
+                  }}
+                >
+                  <Text style={styles.reviewRequestButtonText}>
+                    Review Request
+                  </Text>
+
+                  <Ionicons
+                    name="arrow-forward"
+                    size={15}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {countdown.remaining === 0 && (
+                <Text style={styles.expiredRequestText}>
+                  This request has expired. Refresh your appointments.
+                </Text>
+              )}
+            </View>
+          );
+        })()}
         {/* Availability */}
         <View style={styles.availabilityCard}>
           <View
@@ -1483,5 +1639,112 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 13,
     fontWeight: '700',
+  },
+  /* New booking request notification */
+  bookingRequestCard: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    borderRadius: 16,
+    padding: 15,
+    marginBottom: 16,
+    elevation: 3,
+  },
+
+  bookingRequestHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  bookingRequestIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  bookingRequestTitle: {
+    color: Colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+
+  bookingRequestSubtitle: {
+    color: Colors.textSecondary,
+    fontSize: 11,
+    marginTop: 3,
+  },
+
+  requestPendingBadge: {
+    backgroundColor: '#FCEBDD',
+    borderRadius: 7,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+
+  requestPendingText: {
+    color: '#C2661F',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+
+  bookingRequestDetails: {
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: 10,
+    padding: 11,
+    marginTop: 14,
+    gap: 6,
+  },
+
+  bookingRequestDetail: {
+    color: Colors.text,
+    fontSize: 12,
+  },
+
+  bookingRequestFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+
+  countdownLabel: {
+    color: Colors.textMuted,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+
+  countdownValue: {
+    color: Colors.textGold,
+    fontSize: 21,
+    fontWeight: '800',
+    marginTop: 3,
+  },
+
+  reviewRequestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.accent,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    gap: 7,
+  },
+
+  reviewRequestButtonText: {
+    color: Colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  expiredRequestText: {
+    color: '#B33A3A',
+    fontSize: 11,
+    marginTop: 10,
   },
 });

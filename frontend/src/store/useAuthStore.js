@@ -1,7 +1,10 @@
 
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-
+import {
+  connectBarberSocket,
+  disconnectBarberSocket,
+} from '../services/barberSocket';
 import authService from '../services/authService';
 import customerProfileService from '../services/customerProfileService';
 
@@ -29,6 +32,10 @@ const useAuthStore = create((set, get) => ({
         token: accessToken,
         isAuthenticated: true,
       });
+
+      if (user.roles?.includes('BARBER')) {
+        connectBarberSocket(accessToken);
+      }
 
       return { success: true, user };
     } catch (error) {
@@ -108,6 +115,9 @@ const useAuthStore = create((set, get) => ({
       });
 
       return { success: true, user };
+      if (user.roles?.includes('BARBER')) {
+        connectBarberSocket(accessToken);
+      }
 
     } catch (error) {
       return {
@@ -136,6 +146,10 @@ const useAuthStore = create((set, get) => ({
         user,
         isAuthenticated: true,
       });
+
+      if (user.roles?.includes('BARBER')) {
+        connectBarberSocket(token);
+      }
     } catch (error) {
       console.log('Session restoration failed:', error);
 
@@ -204,6 +218,8 @@ const useAuthStore = create((set, get) => ({
     try {
       await SecureStore.deleteItemAsync('authToken');
     } finally {
+      disconnectBarberSocket();
+
       set({
         user: null,
         token: null,
