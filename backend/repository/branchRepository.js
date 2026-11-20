@@ -1,7 +1,6 @@
 import Branch from "../model/branchModel.js";
 import mongoose from "mongoose";
 
-
 export const findAllActiveBranches = async (filters = {}) => {
   const query = {
     deletedAt: null,
@@ -27,7 +26,7 @@ export const findAllActiveBranches = async (filters = {}) => {
 
   return await Branch.find(query)
     .select(
-      "name address area city isOpen avgRating ratingCount ownerId createdAt updatedAt",
+      "name address area city location isOpen avgRating ratingCount ownerId createdAt updatedAt",
     )
     .sort({
       avgRating: -1,
@@ -40,7 +39,7 @@ export const findBranchById = async (branchId) => {
     _id: branchId,
     deletedAt: null,
   }).select(
-    "name address area city isOpen avgRating ratingCount ownerId createdAt updatedAt",
+    "name address area city location isOpen avgRating ratingCount ownerId createdAt updatedAt",
   );
 };
 
@@ -76,7 +75,7 @@ export const searchBranches = async (searchText) => {
     ],
   })
     .select(
-      "name address area city isOpen avgRating ratingCount ownerId createdAt updatedAt",
+      "name address area city location isOpen avgRating ratingCount ownerId createdAt updatedAt",
     )
     .sort({
       avgRating: -1,
@@ -93,14 +92,13 @@ export const findBranchesByArea = async (area) => {
     },
   })
     .select(
-      "name address area city isOpen avgRating ratingCount ownerId createdAt updatedAt",
+      "name address area city location isOpen avgRating ratingCount ownerId createdAt updatedAt",
     )
     .sort({
       avgRating: -1,
       createdAt: -1,
     });
 };
-
 
 // API - Get Salon Opening Hours
 
@@ -115,12 +113,10 @@ export const findSalonOpeningHoursById = async (branchId) => {
     deletedAt: null,
   })
     .select(
-      "name avgRating ratingCount openingHours workingHours businessHours"
+      "name avgRating ratingCount location openingHours workingHours businessHours",
     )
     .lean();
 };
-
-
 
 export const findNearbyBranches = async ({
   longitude,
