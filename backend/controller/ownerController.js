@@ -50,7 +50,7 @@ export const SetBarberSchedule = async (req, res) => {
     const ownerId = req.user.id;
     const { barberProfileId } = req.params;
     const { schedule } = req.body;
-    const result = await ownerService.setBarberScheduleByOwner(ownerId, barberProfileId, schedule);
+    const result = await ownerSetScheduleService.setBarberScheduleByOwner(ownerId, barberProfileId, schedule);
     return res.status(200).json({ success: true, message: "Schedule set successfully", data: result });
   } catch (error) {
     if (error.message === "UNAUTHORIZED") return res.status(403).json({ success: false, message: "Barber does not belong to your salon" });
@@ -64,7 +64,7 @@ export const AddBarber = async (req, res) => {
     const ownerId = req.user.id;
     const { phoneNumber } = req.body;
 
-    const profile = await ownerService.addBarberToSalon(ownerId, phoneNumber);
+    const profile = await ownerSalonBarberService.addBarberToSalon(ownerId, phoneNumber);
 
     return res.status(201).json({
       success: true,

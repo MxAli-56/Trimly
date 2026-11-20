@@ -557,3 +557,36 @@ Method: PATCH
 URL: http://localhost:5000/api/owner/schedule/approve-request/<REQUEST_ID>
 
 Body: { "approvedDays": ["MONDAY"], "rejectedDays": ["TUESDAY"] }
+
+
+
+Test 1: Add Barber
+
+Method: POST
+
+URL: http://localhost:5000/api/owner/barbers/add
+
+Headers: Authorization: Bearer <OWNER_TOKEN>
+
+Body:
+
+json
+{
+  "phoneNumber": "03001111111"
+}
+(Note: Yeh barber1@trimly.com ka phone hai jo seed script se aaya tha).
+
+Test 2: Remove Barber
+
+Method: PATCH
+
+URL: http://localhost:5000/api/owner/barbers/<BARBER_PROFILE_ID>/remove
+
+Headers: Authorization: Bearer <OWNER_TOKEN>
+
+Body:
+
+json
+{
+  "reason": "Moved to another city"
+}
