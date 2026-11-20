@@ -141,6 +141,11 @@ router.get(
   authenticate,
   getAvailableDates,
 );
+router.get(
+  "/salons/:branchId/barbers",
+  authenticate,
+  getSalonBarbers
+);
 
 router.get(
   "/barbers/:barberId/available-slots",

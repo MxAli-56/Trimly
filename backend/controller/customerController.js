@@ -2,6 +2,11 @@ import {
   getCustomerProfile,
   updateCustomerProfile,
 } from "../services/customer/profileService.js";
+import {
+  fetchSalonBarbers,
+  fetchAvailableDates,
+  fetchAvailableSlots,
+} from "../services/customer/bookingDetailsService.js";
 import { getSalonOpeningHours as getSalonOpeningHoursService } from "../services/customer/salonOpeningHoursService.js";
 import { getServicePrice as getServicePriceService } from "../services/customer/servicePriceService.js";
 import { getAllServices as getAllServicesService } from "../services/customer/allServicesService.js";
@@ -259,7 +264,7 @@ export const getServiceDetails = (req, res) =>
 
 export const getSalonBarbers = (req, res) =>
   run(res, "getSalonBarbers", () =>
-    getBranchBarbers(req.params.branchId, req.query),
+    fetchSalonBarbers(req.params.branchId),
   );
 
 export const getBarberDetails = (req, res) =>
@@ -629,15 +634,53 @@ export const getBarberAvailabilityStatus = async (req, res) => {
   }
 };
 
-export const getAvailableDates = (req, res) =>
-  run(res, "getAvailableDates", () =>
-    getAvailableDatesService(req.params.barberId, req.query),
-  );
 
-export const getAvailableSlots = (req, res) =>
-  run(res, "getAvailableSlots", () =>
-    getAvailableSlotsService(req.params.barberId, req.query),
-  );
+export const getAvailableDates = async (req, res) => {
+  try {
+    const { barberId } = req.params;
+    const { serviceIds, days = 30 } = req.query;
+
+    const data = await fetchAvailableDates(
+      barberId,
+      serviceIds,
+      days,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getAvailableSlots = async (req, res) => {
+  try {
+    const { barberId } = req.params;
+    const { date, serviceIds } = req.query;
+
+    const data = await fetchAvailableSlots(
+      barberId,
+      date,
+      serviceIds,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 
 export const checkSlotAvailability = (req, res) =>
   run(res, "checkSlotAvailability", () =>
