@@ -136,3 +136,7 @@ export const findNearbyBranches = async ({
     },
   }).lean();
 };
+
+export const findBranchByOwnerId = async (ownerId) => {
+  return await Branch.findOne({ ownerId, deletedAt: null });
+};

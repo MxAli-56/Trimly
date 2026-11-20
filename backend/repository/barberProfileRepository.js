@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 
 export const findBarbersByBranchId = async (branchId) => {
   return await BarberProfile.find({
-    currentBranchId: branchId, 
+    currentBranchId: branchId,
     isAvailable: true,
     deletedAt: null,
   })
@@ -13,10 +13,7 @@ export const findBarbersByBranchId = async (branchId) => {
     .populate("userId", "name email phone profilePhoto")
     .sort({ avgRating: -1, createdAt: -1 });
 };
-export const acquireBookingWriteLock = async (
-  barberProfileId,
-  session,
-) => {
+export const acquireBookingWriteLock = async (barberProfileId, session) => {
   return BarberProfile.findOneAndUpdate(
     {
       _id: barberProfileId,
@@ -114,6 +111,29 @@ export const atomicUpdateBarberRating = async (barberProfileId, newRating) => {
         },
       },
     ],
+    { returnDocument: "after" },
+  );
+};
+
+export const findBarberProfileById = async (profileId) => {
+  return await BarberProfile.findOne({ _id: profileId, deletedAt: null });
+};
+
+export const createBarberProfileRecord = async (profileData) => {
+  return await BarberProfile.create(profileData);
+};
+
+export const updateBarberBranchAndHistory = async (
+  profileId,
+  newBranchId,
+  historyEntry,
+) => {
+  return await BarberProfile.findByIdAndUpdate(
+    profileId,
+    {
+      $set: { currentBranchId: newBranchId },
+      $push: { employmentHistory: historyEntry },
+    },
     { returnDocument: "after" },
   );
 };

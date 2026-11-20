@@ -1,5 +1,6 @@
 import * as scheduleRequestService from "../services/barber/barberScheduleRequestService.js";
-import * as ownerService from "../services/owner/ownerSetScheduleService.js";
+import * as ownerSetScheduleService from "../services/owner/ownerSetScheduleService.js";
+import * as ownerSalonBarberService from "../services/owner/ownerSalonBarberService.js";
 
 export const ReviewScheduleRequest = async (req, res) => {
   try {
@@ -54,6 +55,48 @@ export const SetBarberSchedule = async (req, res) => {
   } catch (error) {
     if (error.message === "UNAUTHORIZED") return res.status(403).json({ success: false, message: "Barber does not belong to your salon" });
     if (error.message === "INVALID_SCHEDULE") return res.status(400).json({ success: false, message: "Invalid schedule data" });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const AddBarber = async (req, res) => {
+  try {
+    const ownerId = req.user.id;
+    const { phoneNumber } = req.body;
+
+    const profile = await ownerService.addBarberToSalon(ownerId, phoneNumber);
+
+    return res.status(201).json({
+      success: true,
+      message: "Barber added to salon successfully",
+      data: profile,
+    });
+  } catch (error) {
+    if (error.message === "BRANCH_NOT_FOUND") return res.status(404).json({ success: false, message: "Salon not found" });
+    if (error.message === "USER_NOT_FOUND") return res.status(404).json({ success: false, message: "No user found with this phone number" });
+    if (error.message === "USER_NOT_BARBER") return res.status(400).json({ success: false, message: "This user is not registered as a Barber" });
+    if (error.message === "ALREADY_IN_SALON") return res.status(409).json({ success: false, message: "This barber is already working at a salon" });
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const RemoveBarber = async (req, res) => {
+  try {
+    const ownerId = req.user.id;
+    const { barberProfileId } = req.params;
+    const { reason } = req.body;
+
+    const profile = await ownerService.removeBarberFromSalon(ownerId, barberProfileId, reason);
+
+    return res.status(200).json({
+      success: true,
+      message: "Barber removed from salon successfully",
+      data: profile,
+    });
+  } catch (error) {
+    if (error.message === "BRANCH_NOT_FOUND") return res.status(404).json({ success: false, message: "Salon not found" });
+    if (error.message === "PROFILE_NOT_FOUND") return res.status(404).json({ success: false, message: "Barber profile not found" });
+    if (error.message === "UNAUTHORIZED") return res.status(403).json({ success: false, message: "This barber does not belong to your salon" });
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
