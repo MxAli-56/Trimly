@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -23,6 +24,7 @@ const BookingsScreen = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshingBookingId, setRefreshingBookingId] = useState(null);
   const [error, setError] = useState('');
 
   const fetchBookings = useCallback(async (isRefresh = false) => {
@@ -30,6 +32,7 @@ const BookingsScreen = () => {
       setBookings([]);
       setError('Please sign in to view your bookings.');
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
@@ -46,20 +49,19 @@ const BookingsScreen = () => {
           : await bookingService.getPastBookings(token);
 
       const bookingList = Array.isArray(response)
-  ? response
-  : Array.isArray(response?.bookings)
-    ? response.bookings
-    : Array.isArray(response?.data?.bookings)
-      ? response.data.bookings
-      : [];
+        ? response
+        : Array.isArray(response?.bookings)
+          ? response.bookings
+          : Array.isArray(response?.data?.bookings)
+            ? response.data.bookings
+            : [];
 
-setBookings(bookingList);
-
+      setBookings(bookingList);
       setError('');
     } catch (err) {
       setError(
         err.response?.data?.message ||
-        'Unable to load your bookings. Please try again.'
+          'Unable to load your bookings. Please try again.'
       );
     } finally {
       setLoading(false);
@@ -72,6 +74,63 @@ setBookings(bookingList);
       fetchBookings();
     }, [fetchBookings])
   );
+
+  const refreshBookingStatus = async (booking) => {
+    const bookingId = booking._id || booking.bookingId;
+
+    if (!bookingId || !token) {
+      return;
+    }
+
+    setRefreshingBookingId(bookingId);
+
+    try {
+      const response = await bookingService.getBookingStatus(
+        bookingId,
+        token
+      );
+
+      const statusData =
+        response?.data?.data ||
+        response?.data ||
+        response;
+
+      if (!statusData?.status) {
+        throw new Error('The booking status could not be retrieved.');
+      }
+
+      setBookings((currentBookings) =>
+        currentBookings.map((item) => {
+          const itemId = item._id || item.bookingId;
+
+          if (itemId !== bookingId) {
+            return item;
+          }
+
+          return {
+            ...item,
+            status: statusData.status,
+            statusId: item.statusId
+              ? {
+                  ...item.statusId,
+                  name: statusData.status,
+                }
+              : item.statusId,
+            holdExpiresAt: statusData.holdExpiresAt,
+          };
+        })
+      );
+    } catch (err) {
+      Alert.alert(
+        'Unable to refresh status',
+        err.response?.data?.message ||
+          err.message ||
+          'Please try again.'
+      );
+    } finally {
+      setRefreshingBookingId(null);
+    }
+  };
 
   const formatDate = (date) => {
     if (!date) return 'Date unavailable';
@@ -95,83 +154,139 @@ setBookings(bookingList);
     if (!time) return '';
 
     const [hour, minute] = time.split(':').map(Number);
+
+    if (
+      !Number.isInteger(hour) ||
+      !Number.isInteger(minute) ||
+      hour < 0 ||
+      hour > 23 ||
+      minute < 0 ||
+      minute > 59
+    ) {
+      return '';
+    }
+
     const period = hour >= 12 ? 'PM' : 'AM';
     const formattedHour = hour % 12 || 12;
 
     return `${formattedHour}:${String(minute).padStart(2, '0')} ${period}`;
   };
 
- const getStatusStyle = (status) => {
-  const normalized = String(status || '').toUpperCase();
+  const getStatusStyle = (status) => {
+    const normalized = String(status || '').toUpperCase();
 
-  if (['CONFIRMED', 'IN_PROGRESS'].includes(normalized)) {
-    return { backgroundColor: '#E6F1E9', color: '#34734A' };
-  }
+    if (['CONFIRMED', 'IN_PROGRESS'].includes(normalized)) {
+      return {
+        backgroundColor: '#E6F1E9',
+        color: '#34734A',
+      };
+    }
 
-  if (normalized === 'COMPLETED') {
-    return { backgroundColor: '#E8EAF0', color: '#515B72' };
-  }
+    if (normalized === 'COMPLETED') {
+      return {
+        backgroundColor: '#E8EAF0',
+        color: '#515B72',
+      };
+    }
 
-  if (
-    normalized.includes('CANCELLED') ||
-    normalized === 'REJECTED' ||
-    normalized === 'NO_SHOW' ||
-    normalized === 'EXPIRED'
-  ) {
-    return { backgroundColor: '#F8E8E6', color: '#B64B43' };
-  }
+    if (normalized === 'EXPIRED') {
+      return {
+        backgroundColor: '#EAE9E6',
+        color: '#77746E',
+      };
+    }
 
-  return { backgroundColor: '#F5EEDF', color: '#A47A35' };
-};
+    if (
+      normalized.includes('CANCELLED') ||
+      ['REJECTED', 'NO_SHOW'].includes(normalized)
+    ) {
+      return {
+        backgroundColor: '#F8E8E6',
+        color: '#B64B43',
+      };
+    }
+
+    return {
+      backgroundColor: '#F5EEDF',
+      color: '#A47A35',
+    };
+  };
 
   const renderBookingCard = (booking) => {
-  const salon =
-    booking.branchId && typeof booking.branchId === 'object'
-      ? booking.branchId
-      : booking.salonId && typeof booking.salonId === 'object'
-        ? booking.salonId
-        : booking.salon || {};
+    const salon =
+      booking.branchId && typeof booking.branchId === 'object'
+        ? booking.branchId
+        : booking.salonId && typeof booking.salonId === 'object'
+          ? booking.salonId
+          : booking.salon || {};
 
-  const barber =
-    booking.barberId && typeof booking.barberId === 'object'
-      ? booking.barberId
-      : booking.barber || {};
+    const barber =
+      booking.barberId && typeof booking.barberId === 'object'
+        ? booking.barberId
+        : booking.barber || {};
 
-  const status = String(
-    booking.status || booking.statusId?.name || 'PENDING'
-  ).toUpperCase();
+    const status = String(
+      booking.status || booking.statusId?.name || 'PENDING'
+    ).toUpperCase();
 
-  const statusStyle = getStatusStyle(status);
+    const statusStyle = getStatusStyle(status);
+    const isExpired = status === 'EXPIRED';
 
-  const services = Array.isArray(booking.services)
-    ? booking.services
-    : [];
+    const services = Array.isArray(booking.services)
+      ? booking.services
+      : [];
 
-  const bookingDate = booking.date || booking.bookingDate;
+    const bookingDate = booking.date || booking.bookingDate;
+    const bookingId = booking._id || booking.bookingId;
 
-  const barberName =
-    barber.name ||
-    barber.fullName ||
-    barber.userId?.name ||
-    booking.barberName ||
-    'Barber';
+    const barberName =
+      barber.name ||
+      barber.fullName ||
+      barber.userId?.name ||
+      booking.barberName ||
+      'Barber';
 
-  return (
-      <View key={booking._id || booking.bookingId} style={styles.bookingCard}>
+    const canRefreshStatus =
+      activeTab === 'upcoming' &&
+      ['PENDING', 'ACCEPTED'].includes(status);
+
+    const isRefreshingThisBooking =
+      refreshingBookingId === bookingId;
+
+    return (
+      <View
+        key={bookingId}
+        style={[
+          styles.bookingCard,
+          isExpired && styles.expiredBookingCard,
+        ]}
+      >
         <View style={styles.cardTop}>
           <View style={styles.salonInfo}>
-            <View style={styles.salonIcon}>
+            <View
+              style={[
+                styles.salonIcon,
+                isExpired && styles.expiredSalonIcon,
+              ]}
+            >
               <Ionicons
                 name="cut-outline"
                 size={21}
-                color={Colors.secondary}
+                color={isExpired ? '#77746E' : Colors.secondary}
               />
             </View>
 
             <View style={styles.salonText}>
-              <Text style={styles.salonName} numberOfLines={1}>
+              <Text
+                style={[
+                  styles.salonName,
+                  isExpired && styles.expiredText,
+                ]}
+                numberOfLines={1}
+              >
                 {salon.name || 'Salon'}
               </Text>
+
               <Text style={styles.salonAddress} numberOfLines={1}>
                 {salon.address || 'Salon appointment'}
               </Text>
@@ -184,56 +299,165 @@ setBookings(bookingList);
               { backgroundColor: statusStyle.backgroundColor },
             ]}
           >
-            <Text style={[styles.statusText, { color: statusStyle.color }]}>
-              {status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase())}
+            <Text
+              style={[
+                styles.statusText,
+                { color: statusStyle.color },
+              ]}
+            >
+              {status
+                .replace(/_/g, ' ')
+                .toLowerCase()
+                .replace(/\b\w/g, (char) => char.toUpperCase())}
             </Text>
           </View>
         </View>
 
+        {canRefreshStatus && (
+          <TouchableOpacity
+            style={styles.statusRefreshButton}
+            onPress={() => refreshBookingStatus(booking)}
+            disabled={!!refreshingBookingId}
+          >
+            {isRefreshingThisBooking ? (
+              <ActivityIndicator
+                size="small"
+                color={Colors.secondary}
+              />
+            ) : (
+              <Ionicons
+                name="refresh-outline"
+                size={15}
+                color={Colors.secondary}
+              />
+            )}
+
+            <Text style={styles.statusRefreshText}>
+              {isRefreshingThisBooking
+                ? 'Checking status...'
+                : 'Refresh booking status'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {isExpired && (
+          <View style={styles.expiredNotice}>
+            <Ionicons
+              name="information-circle-outline"
+              size={17}
+              color="#77746E"
+            />
+
+            <View style={styles.expiredNoticeContent}>
+              <Text style={styles.expiredNoticeTitle}>
+                Request expired
+              </Text>
+
+              <Text style={styles.expiredNoticeText}>
+                This booking request is no longer active. You can
+                make another appointment whenever you're ready.
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View style={styles.cardDivider} />
 
         <View style={styles.detailRow}>
-          <Ionicons name="calendar-outline" size={17} color={Colors.secondary} />
-          <Text style={styles.detailText}>
+          <Ionicons
+            name="calendar-outline"
+            size={17}
+            color={isExpired ? '#99968F' : Colors.secondary}
+          />
+          <Text
+            style={[
+              styles.detailText,
+              isExpired && styles.expiredDetailText,
+            ]}
+          >
             {formatDate(bookingDate)}
           </Text>
         </View>
 
         <View style={styles.detailRow}>
-          <Ionicons name="time-outline" size={17} color={Colors.secondary} />
-          <Text style={styles.detailText}>
+          <Ionicons
+            name="time-outline"
+            size={17}
+            color={isExpired ? '#99968F' : Colors.secondary}
+          />
+          <Text
+            style={[
+              styles.detailText,
+              isExpired && styles.expiredDetailText,
+            ]}
+          >
             {formatTime(booking.startTime)}
-            {booking.endTime ? ` – ${formatTime(booking.endTime)}` : ''}
+            {booking.endTime
+              ? ` – ${formatTime(booking.endTime)}`
+              : ''}
           </Text>
         </View>
 
         <View style={styles.detailRow}>
-          <Ionicons name="person-outline" size={17} color={Colors.secondary} />
-          <Text style={styles.detailText}>
+          <Ionicons
+            name="person-outline"
+            size={17}
+            color={isExpired ? '#99968F' : Colors.secondary}
+          />
+          <Text
+            style={[
+              styles.detailText,
+              isExpired && styles.expiredDetailText,
+            ]}
+          >
             {barberName}
           </Text>
         </View>
 
-        <View style={styles.servicesSection}>
+        <View
+          style={[
+            styles.servicesSection,
+            isExpired && styles.expiredServicesSection,
+          ]}
+        >
           <Text style={styles.sectionLabel}>SERVICES</Text>
 
           {services.length > 0 ? (
             services.map((service, index) => (
               <View
-                key={service.serviceId?._id || service.serviceId || index}
+                key={
+                  service.serviceId?._id ||
+                  service.serviceId ||
+                  index
+                }
                 style={styles.serviceRow}
               >
-                <Text style={styles.serviceName}>
-                  {service.name || service.serviceId?.name || 'Service'}
+                <Text
+                  style={[
+                    styles.serviceName,
+                    isExpired && styles.expiredDetailText,
+                  ]}
+                >
+                  {service.name ||
+                    service.serviceId?.name ||
+                    'Service'}
                 </Text>
 
-                <Text style={styles.servicePrice}>
-                  Rs. {Number(service.price || 0).toLocaleString('en-PK')}
+                <Text
+                  style={[
+                    styles.servicePrice,
+                    isExpired && styles.expiredDetailText,
+                  ]}
+                >
+                  Rs.{' '}
+                  {Number(service.price || 0).toLocaleString('en-PK')}
                 </Text>
               </View>
             ))
           ) : (
-            <Text style={styles.serviceName}>Service details unavailable</Text>
+            <Text style={styles.serviceName}>
+              Service details unavailable
+            </Text>
           )}
         </View>
 
@@ -242,8 +466,14 @@ setBookings(bookingList);
         <View style={styles.cardFooter}>
           <View>
             <Text style={styles.totalLabel}>TOTAL AMOUNT</Text>
-            <Text style={styles.totalAmount}>
-              Rs. {Number(booking.totalAmount || 0).toLocaleString('en-PK')}
+            <Text
+              style={[
+                styles.totalAmount,
+                isExpired && styles.expiredText,
+              ]}
+            >
+              Rs.{' '}
+              {Number(booking.totalAmount || 0).toLocaleString('en-PK')}
             </Text>
           </View>
 
@@ -271,13 +501,20 @@ setBookings(bookingList);
           onPress={() => fetchBookings(true)}
           disabled={loading || refreshing}
         >
-          <Ionicons name="refresh-outline" size={21} color={Colors.primary} />
+          <Ionicons
+            name="refresh-outline"
+            size={21}
+            color={Colors.primary}
+          />
         </TouchableOpacity>
       </View>
 
       <View style={styles.tabs}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
+          style={[
+            styles.tab,
+            activeTab === 'upcoming' && styles.activeTab,
+          ]}
           onPress={() => setActiveTab('upcoming')}
         >
           <Text
@@ -291,7 +528,10 @@ setBookings(bookingList);
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'past' && styles.activeTab]}
+          style={[
+            styles.tab,
+            activeTab === 'past' && styles.activeTab,
+          ]}
           onPress={() => setActiveTab('past')}
         >
           <Text
@@ -307,8 +547,13 @@ setBookings(bookingList);
 
       {loading ? (
         <View style={styles.centerState}>
-          <ActivityIndicator size="large" color={Colors.secondary} />
-          <Text style={styles.stateText}>Loading your bookings...</Text>
+          <ActivityIndicator
+            size="large"
+            color={Colors.secondary}
+          />
+          <Text style={styles.stateText}>
+            Loading your bookings...
+          </Text>
         </View>
       ) : error ? (
         <View style={styles.centerState}>
@@ -317,8 +562,14 @@ setBookings(bookingList);
             size={42}
             color={Colors.textMuted}
           />
-          <Text style={styles.stateTitle}>Something went wrong</Text>
-          <Text style={styles.stateText}>{error}</Text>
+
+          <Text style={styles.stateTitle}>
+            Something went wrong
+          </Text>
+
+          <Text style={styles.stateText}>
+            {error}
+          </Text>
 
           <TouchableOpacity
             style={styles.retryButton}
@@ -448,6 +699,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  expiredBookingCard: {
+    backgroundColor: '#F0EFEC',
+    borderColor: '#DAD8D2',
+  },
   cardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -467,6 +722,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 11,
+  },
+  expiredSalonIcon: {
+    backgroundColor: '#E5E3DE',
   },
   salonText: {
     flex: 1,
@@ -490,6 +748,48 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  statusRefreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    paddingVertical: 5,
+  },
+  statusRefreshText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.secondary,
+    marginLeft: 6,
+  },
+  expiredNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#E8E7E3',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+  },
+  expiredNoticeContent: {
+    flex: 1,
+    marginLeft: 9,
+  },
+  expiredNoticeTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#68665F',
+    marginBottom: 4,
+  },
+  expiredNoticeText: {
+    fontSize: 11,
+    lineHeight: 17,
+    color: '#77746E',
+  },
+  expiredText: {
+    color: '#77746E',
+  },
+  expiredDetailText: {
+    color: '#89867F',
+  },
   cardDivider: {
     height: 1,
     backgroundColor: Colors.border,
@@ -510,6 +810,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     marginTop: 4,
+  },
+  expiredServicesSection: {
+    backgroundColor: '#E9E8E4',
   },
   sectionLabel: {
     fontSize: 10,

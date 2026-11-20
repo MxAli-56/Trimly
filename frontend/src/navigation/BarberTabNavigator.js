@@ -17,7 +17,7 @@ import BarberScheduleScreen from '../screens/Barber/BarberScheduleScreen';
 import UpdatePasswordScreen from '../screens/Auth/UpdatePasswordScreen';
 
 import Colors from '../constants/Colors';
-import LeaveModal from '../componentsbarber/LeaveModal';
+import LeaveModal from '../components/Barber/LeaveModal';
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createNativeStackNavigator();

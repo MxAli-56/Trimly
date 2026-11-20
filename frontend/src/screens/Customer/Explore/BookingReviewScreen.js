@@ -1,7 +1,9 @@
 
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,57 +11,75 @@ import {
   View,
 } from 'react-native';
 
-import bookingService from '../../../services/bookingService';
-import useAuthStore from '../../../store/useAuthStore';
 import { Ionicons } from '@expo/vector-icons';
 
 import Colors from '../../../constants/Colors';
+import bookingService from '../../../services/bookingService';
+import useAuthStore from '../../../store/useAuthStore';
 
 const BookingReviewScreen = ({ navigation, route }) => {
   const {
-  branchId,
-  salon,
-  selectedServices: initialServices,
-  selectedBarber,
-  selectedDate,
-  selectedSlot,
-} = route.params;
+    branchId,
+    salon,
+    selectedServices: initialServices,
+    selectedBarber,
+    selectedDate,
+    selectedSlot,
+  } = route.params || {};
 
-const [selectedServices, setSelectedServices] = useState(
-  Array.isArray(initialServices) ? initialServices : []
-);
-const token = useAuthStore((state) => state.token);
+  const token = useAuthStore((state) => state.token);
 
-const [isSubmitting, setIsSubmitting] = useState(false);
-const totalAmount = useMemo(
-  () =>
-    selectedServices.reduce(
-      (total, service) => total + Number(service.price || 0),
-      0
-    ),
-  [selectedServices]
-);
-
-const totalDuration = useMemo(
-  () =>
-    selectedServices.reduce(
-      (total, service) =>
-        total + Number(service.durationMinutes || 0),
-      0
-    ),
-  [selectedServices]
-);
-
-const removeService = (serviceId) => {
-  setSelectedServices((current) =>
-    current.filter(
-      (service) =>
-        (service._id || service.id) !== serviceId
-    )
+  const [selectedServices, setSelectedServices] = useState(
+    Array.isArray(initialServices) ? initialServices : []
   );
-};
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [bookingConfirmation, setBookingConfirmation] = useState(null);
+
+  const totalAmount = useMemo(
+    () =>
+      selectedServices.reduce(
+        (total, service) =>
+          total + Number(service.price || 0),
+        0
+      ),
+    [selectedServices]
+  );
+
+  const totalDuration = useMemo(
+    () =>
+      selectedServices.reduce(
+        (total, service) =>
+          total + Number(service.durationMinutes || 0),
+        0
+      ),
+    [selectedServices]
+  );
+
+  const serviceIds = useMemo(
+    () =>
+      selectedServices
+        .map((service) => service?._id || service?.id)
+        .filter(Boolean),
+    [selectedServices]
+  );
+
+  const barberProfileId =
+    selectedBarber?.barberProfileId || selectedBarber?._id;
+
+  const barberName =
+    selectedBarber?.name ||
+    selectedBarber?.fullName ||
+    selectedBarber?.userId?.name ||
+    'Selected barber';
+
+  const formatAmount = (amount) =>
+    Number(amount || 0).toLocaleString();
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'Not selected';
+
     const date = new Date(`${dateString}T00:00:00Z`);
 
     return date.toLocaleDateString('en-US', {
@@ -71,95 +91,124 @@ const removeService = (serviceId) => {
     });
   };
 
-  const barberName =
-    selectedBarber?.name ||
-    selectedBarber?.fullName ||
-    selectedBarber?.userId?.name ||
-    'Selected barber';
-
- const handleConfirmBooking = async () => {
-  if (!token) {
-    Alert.alert('Session expired', 'Please log in again.');
-    return;
-  }
-
-  const barberProfileId =
-    selectedBarber?.barberProfileId || selectedBarber?._id;
-
-  if (!barberProfileId) {
-    Alert.alert('Barber unavailable', 'Please select a barber again.');
-    return;
-  }
-
-  if (!selectedDate || !selectedSlot?.startTime) {
-    Alert.alert(
-      'Incomplete booking',
-      'Please select your appointment date and time.'
+  const removeService = (serviceId) => {
+    setSelectedServices((current) =>
+      current.filter(
+        (service) =>
+          (service._id || service.id) !== serviceId
+      )
     );
-    return;
-  }
-
-  const serviceIds = selectedServices
-    .map((service) => service._id || service.id)
-    .filter(Boolean);
-
-  if (serviceIds.length !== selectedServices.length || serviceIds.length === 0) {
-    Alert.alert(
-      'Invalid services',
-      'Some selected services are missing their IDs. Please review your selection.'
-    );
-    return;
-  }
-
-  const bookingData = {
-    barberProfileId,
-    serviceIds,
-    date: selectedDate,
-    startTime: selectedSlot.startTime,
   };
 
-  try {
-    setIsSubmitting(true);
+  const navigateToBookings = () => {
+    setSuccessModalVisible(false);
 
-    const response = await bookingService.createBooking(
-      bookingData,
-      token
-    );
+    // Find the parent navigator containing the Bookings tab.
+    let navigator = navigation;
 
-    const booking = response?.data || response;
+    while (navigator) {
+      const state = navigator.getState?.();
 
-    Alert.alert(
-      'Booking requested!',
-      `${response?.message || 'Your booking request has been submitted.'}\n\nAppointment code: ${
-        booking?.appointmentCode || 'Pending'
-      }\n\nStatus: ${
-        booking?.status || 'PENDING'
-      }\n\nThe barber has 2 minutes to accept your request.`,
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]
-    );
-  } catch (error) {
-    const statusCode = error.response?.status;
+      if (state?.routeNames?.includes('Bookings')) {
+        navigator.navigate('Bookings');
+        return;
+      }
 
-    const message =
-      error.response?.data?.message ||
-      'Unable to submit your booking. Please try again.';
-
-    if (statusCode === 409) {
-      Alert.alert(
-        'Time slot unavailable',
-        'This appointment slot is no longer available. Please go back and choose another time.'
-      );
-    } else {
-      Alert.alert('Booking failed', message);
+      navigator = navigator.getParent?.();
     }
-  } finally {
-    setIsSubmitting(false);
-  }
+
+    // Fallback if the tab navigator cannot be found.
+    navigation.goBack();
+  };
+
+  const handleConfirmBooking = async () => {
+    if (isSubmitting) return;
+
+    if (!token) {
+      Alert.alert(
+        'Session expired',
+        'Please log in again.'
+      );
+      return;
+    }
+
+    if (!barberProfileId) {
+      Alert.alert(
+        'Barber unavailable',
+        'Please select a barber again.'
+      );
+      return;
+    }
+
+    if (!selectedDate || !selectedSlot?.startTime) {
+      Alert.alert(
+        'Incomplete booking',
+        'Please select your appointment date and time.'
+      );
+      return;
+    }
+
+    if (
+      selectedServices.length === 0 ||
+      serviceIds.length !== selectedServices.length
+    ) {
+      Alert.alert(
+        'Invalid services',
+        'Please select at least one valid service.'
+      );
+      return;
+    }
+
+    const bookingData = {
+      barberProfileId,
+      serviceIds,
+      date: selectedDate,
+      startTime: selectedSlot.startTime,
+    };
+
+    try {
+      setIsSubmitting(true);
+
+      const response = await bookingService.createBooking(
+        bookingData,
+        token
+      );
+
+      const booking =
+        response?.data?.data ||
+        response?.data ||
+        response?.booking ||
+        response;
+
+      setBookingConfirmation({
+        appointmentCode:
+          booking?.appointmentCode || 'Not available',
+
+        status:
+          booking?.status ||
+          booking?.statusId?.name ||
+          'PENDING',
+      });
+
+      setSuccessModalVisible(true);
+    } catch (error) {
+      const statusCode = error.response?.status;
+
+      const message =
+        error.response?.data?.message ||
+        'Unable to submit your booking. Please try again.';
+
+      if (statusCode === 409) {
+        Alert.alert(
+          'Time slot unavailable',
+          'This appointment slot is no longer available. Please go back and choose another time.'
+        );
+      } else {
+        Alert.alert('Booking failed', message);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -169,6 +218,7 @@ const removeService = (serviceId) => {
         <Pressable
           onPress={() => navigation.goBack()}
           style={styles.backButton}
+          disabled={isSubmitting}
         >
           <Ionicons
             name="arrow-back"
@@ -192,6 +242,7 @@ const removeService = (serviceId) => {
           <Text style={styles.introTitle}>
             Your appointment,{'\n'}your way.
           </Text>
+
           <Text style={styles.introSubtitle}>
             Review everything before confirming your booking.
           </Text>
@@ -214,8 +265,12 @@ const removeService = (serviceId) => {
               <Text style={styles.primaryText}>
                 {salon?.name || 'Selected salon'}
               </Text>
+
               <Text style={styles.secondaryText}>
-                {salon?.area || salon?.city || salon?.address || ''}
+                {salon?.area ||
+                  salon?.city ||
+                  salon?.address ||
+                  ''}
               </Text>
             </View>
           </View>
@@ -223,7 +278,9 @@ const removeService = (serviceId) => {
 
         {/* Appointment details */}
         <View style={styles.card}>
-          <Text style={styles.cardEyebrow}>APPOINTMENT DETAILS</Text>
+          <Text style={styles.cardEyebrow}>
+            APPOINTMENT DETAILS
+          </Text>
 
           <View style={styles.detailRow}>
             <View style={styles.detailIcon}>
@@ -236,7 +293,9 @@ const removeService = (serviceId) => {
 
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>BARBER</Text>
-              <Text style={styles.detailValue}>{barberName}</Text>
+              <Text style={styles.detailValue}>
+                {barberName}
+              </Text>
             </View>
           </View>
 
@@ -289,6 +348,7 @@ const removeService = (serviceId) => {
               <Text style={styles.sectionTitle}>
                 Selected services
               </Text>
+
               <Text style={styles.sectionSubtitle}>
                 {selectedServices.length} services selected
               </Text>
@@ -297,6 +357,7 @@ const removeService = (serviceId) => {
             <Pressable
               onPress={() => navigation.goBack()}
               style={styles.editButton}
+              disabled={isSubmitting}
             >
               <Text style={styles.editButtonText}>Edit</Text>
             </Pressable>
@@ -307,45 +368,53 @@ const removeService = (serviceId) => {
               <Text style={styles.emptyText}>
                 No services selected.
               </Text>
-              <Pressable onPress={() => navigation.goBack()}>
+
+              <Pressable
+                onPress={() => navigation.goBack()}
+              >
                 <Text style={styles.editButtonText}>
                   Add services
                 </Text>
               </Pressable>
             </View>
           ) : (
-            selectedServices.map((service) => (
-              <View
-                key={service._id}
-                style={styles.serviceCard}
-              >
-                <View style={styles.serviceInfo}>
-                  <Text style={styles.serviceName}>
-                    {service.name}
-                  </Text>
+            selectedServices.map((service) => {
+              const serviceId = service._id || service.id;
 
-                  <Text style={styles.serviceDuration}>
-                    {service.durationMinutes || 0} min
-                  </Text>
-                </View>
-
-                <Text style={styles.servicePrice}>
-                  Rs. {Number(service.price || 0).toLocaleString()}
-                </Text>
-
-                <Pressable
-                  onPress={() => removeService(service._id)}
-                  hitSlop={10}
-                  style={styles.removeButton}
+              return (
+                <View
+                  key={serviceId}
+                  style={styles.serviceCard}
                 >
-                  <Ionicons
-                    name="close-circle-outline"
-                    size={21}
-                    color={Colors.textSecondary}
-                  />
-                </Pressable>
-              </View>
-            ))
+                  <View style={styles.serviceInfo}>
+                    <Text style={styles.serviceName}>
+                      {service.name || 'Service'}
+                    </Text>
+
+                    <Text style={styles.serviceDuration}>
+                      {Number(service.durationMinutes || 0)} min
+                    </Text>
+                  </View>
+
+                  <Text style={styles.servicePrice}>
+                    Rs. {formatAmount(service.price)}
+                  </Text>
+
+                  <Pressable
+                    onPress={() => removeService(serviceId)}
+                    hitSlop={10}
+                    style={styles.removeButton}
+                    disabled={isSubmitting}
+                  >
+                    <Ionicons
+                      name="close-circle-outline"
+                      size={21}
+                      color={Colors.textSecondary}
+                    />
+                  </Pressable>
+                </View>
+              );
+            })
           )}
         </View>
 
@@ -358,12 +427,14 @@ const removeService = (serviceId) => {
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Services</Text>
             <Text style={styles.priceValue}>
-              Rs. {totalAmount.toLocaleString()}
+              Rs. {formatAmount(totalAmount)}
             </Text>
           </View>
 
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Estimated duration</Text>
+            <Text style={styles.priceLabel}>
+              Estimated duration
+            </Text>
             <Text style={styles.priceValue}>
               {totalDuration} minutes
             </Text>
@@ -374,7 +445,7 @@ const removeService = (serviceId) => {
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>
-              Rs. {totalAmount.toLocaleString()}
+              Rs. {formatAmount(totalAmount)}
             </Text>
           </View>
         </View>
@@ -385,9 +456,11 @@ const removeService = (serviceId) => {
             size={18}
             color={Colors.secondary}
           />
+
           <Text style={styles.noteText}>
-            Please review your appointment details carefully before
-            confirming.
+            Your booking will remain pending until the barber
+            accepts your request. You will receive an appointment
+            code after successful submission.
           </Text>
         </View>
       </ScrollView>
@@ -397,35 +470,138 @@ const removeService = (serviceId) => {
         <View>
           <Text style={styles.bottomLabel}>TOTAL AMOUNT</Text>
           <Text style={styles.bottomPrice}>
-            Rs. {totalAmount.toLocaleString()}
+            Rs. {formatAmount(totalAmount)}
           </Text>
         </View>
 
         <Pressable
-  style={[
-    styles.confirmButton,
-    (selectedServices.length === 0 || isSubmitting) &&
-      styles.disabledButton,
-  ]}
-  disabled={selectedServices.length === 0 || isSubmitting}
-  onPress={handleConfirmBooking}
->
-  {isSubmitting ? (
-    <ActivityIndicator color={Colors.white} size="small" />
-  ) : (
-    <>
-      <Text style={styles.confirmButtonText}>
-        Confirm booking
-      </Text>
-      <Ionicons
-        name="arrow-forward"
-        size={17}
-        color={Colors.white}
-      />
-    </>
-  )}
-</Pressable>
+          style={[
+            styles.confirmButton,
+            (
+              selectedServices.length === 0 ||
+              isSubmitting
+            ) && styles.disabledButton,
+          ]}
+          disabled={
+            selectedServices.length === 0 ||
+            isSubmitting
+          }
+          onPress={handleConfirmBooking}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator
+              color={Colors.white}
+              size="small"
+            />
+          ) : (
+            <>
+              <Text style={styles.confirmButtonText}>
+                Confirm booking
+              </Text>
+
+              <Ionicons
+                name="arrow-forward"
+                size={17}
+                color={Colors.white}
+              />
+            </>
+          )}
+        </Pressable>
       </View>
+
+      {/* Booking success modal */}
+      <Modal
+        visible={successModalVisible}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModal}>
+            <View style={styles.successIconContainer}>
+              <Ionicons
+                name="checkmark"
+                size={34}
+                color={Colors.white}
+              />
+            </View>
+
+            <Text style={styles.successEyebrow}>
+              BOOKING SUBMITTED
+            </Text>
+
+            <Text style={styles.successTitle}>
+              You're one step{'\n'}closer to looking sharp.
+            </Text>
+
+            <Text style={styles.successDescription}>
+              Your appointment request has been sent
+              successfully. The barber will review and
+              respond to your request shortly.
+            </Text>
+
+            <View style={styles.confirmationCard}>
+              <Text style={styles.confirmationLabel}>
+                APPOINTMENT CODE
+              </Text>
+
+              <Text style={styles.appointmentCode}>
+                {bookingConfirmation?.appointmentCode ||
+                  'Not available'}
+              </Text>
+
+              <View style={styles.confirmationDivider} />
+
+              <View style={styles.confirmationStatusRow}>
+                <Text style={styles.confirmationLabel}>
+                  BOOKING STATUS
+                </Text>
+
+                <View style={styles.pendingBadge}>
+                  <View style={styles.pendingDot} />
+
+                  <Text style={styles.pendingText}>
+                    {bookingConfirmation?.status || 'PENDING'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.acceptanceNote}>
+              <Ionicons
+                name="time-outline"
+                size={18}
+                color={Colors.secondary}
+              />
+
+              <Text style={styles.acceptanceText}>
+                The barber has 2 minutes to accept your
+                booking request.
+              </Text>
+            </View>
+
+            <Pressable
+              style={styles.modalButton}
+              onPress={navigateToBookings}
+            >
+              <Text style={styles.modalButtonText}>
+                View my bookings
+              </Text>
+
+              <Ionicons
+                name="arrow-forward"
+                size={18}
+                color={Colors.white}
+              />
+            </Pressable>
+
+            <Text style={styles.modalFooter}>
+              THANK YOU FOR CHOOSING TRIMLY
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -726,6 +902,142 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 12,
     fontWeight: '700',
+  },
+
+  // Success modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 13, 11, 0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 22,
+  },
+  successModal: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: Colors.background,
+    borderRadius: 22,
+    paddingHorizontal: 24,
+    paddingTop: 30,
+    paddingBottom: 22,
+    alignItems: 'center',
+  },
+  successIconContainer: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 22,
+  },
+  successEyebrow: {
+    color: Colors.secondary,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  successTitle: {
+    color: Colors.primary,
+    fontSize: 25,
+    lineHeight: 32,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  successDescription: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 19,
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 23,
+  },
+  confirmationCard: {
+    width: '100%',
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    padding: 17,
+  },
+  confirmationLabel: {
+    color: Colors.textSecondary,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  appointmentCode: {
+    color: Colors.primary,
+    fontSize: 21,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginTop: 7,
+  },
+  confirmationDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 15,
+  },
+  confirmationStatusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3DC',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 20,
+    gap: 6,
+  },
+  pendingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#C58A28',
+  },
+  pendingText: {
+    color: '#95651C',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  acceptanceNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 19,
+    marginBottom: 22,
+    paddingHorizontal: 4,
+  },
+  acceptanceText: {
+    flex: 1,
+    color: Colors.textSecondary,
+    fontSize: 11,
+    lineHeight: 17,
+    marginLeft: 9,
+  },
+  modalButton: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: 11,
+    paddingVertical: 16,
+    gap: 10,
+  },
+  modalButtonText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalFooter: {
+    color: Colors.textSecondary,
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    marginTop: 20,
   },
 });
 

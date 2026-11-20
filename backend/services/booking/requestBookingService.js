@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 import { randomUUID } from "node:crypto";
 
@@ -58,7 +57,7 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
   }
 
   // FIX: Database uses branchId, not currentBranchId
-  const branchId = barber.branchId;
+  const branchId = barber.currentBranchId;
 
   if (!branchId || !mongoose.isValidObjectId(branchId)) {
     throw new Error("BARBER_BRANCH_NOT_FOUND");

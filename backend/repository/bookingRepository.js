@@ -1,3 +1,4 @@
+
 import Booking from "../model/bookingModel.js";
 import Status from "../model/statusModel.js";
 import Payment from "../model/paymentModel.js";
@@ -12,7 +13,12 @@ export const findBookingStatus = async (name, type) => {
 };
 
 // Create booking
-export const createBookingRecord = async (data) => {
+export const createBookingRecord = async (data, session = null) => {
+  if (session) {
+    const [booking] = await Booking.create([data], { session });
+    return booking;
+  }
+
   return Booking.create(data);
 };
 
@@ -33,7 +39,9 @@ export const findOverlappingBookings = async ({
     startTime: { $lt: endTime },
     endTime: { $gt: startTime },
     deletedAt: null,
-  }).lean();
+  })
+    .populate("statusId", "name type")
+    .lean();
 };
 
 export const findBookingStatuses = async () => {
@@ -91,8 +99,8 @@ export const findBookingByIdAndCustomer = async (bookingId, customerId) => {
 
 export const findUpcomingBookingsByCustomer = async (
   customerId,
-  todayDateStr, // e.g., "2026-11-14"
-  currentTimeStr, // e.g., "14:30"
+  todayDateStr,
+  currentTimeStr,
   { page = 1, limit = 10 } = {},
 ) => {
   const today = new Date(`${todayDateStr}T00:00:00.000Z`);
@@ -101,9 +109,9 @@ export const findUpcomingBookingsByCustomer = async (
     customerId,
     deletedAt: null,
     $or: [
-      { bookingDate: { $gt: today } }, // Future dates
+      { bookingDate: { $gt: today } },
       {
-        bookingDate: today, // Aaj ki date hai, toh check time
+        bookingDate: today,
         startTime: { $gte: currentTimeStr },
       },
     ],
@@ -119,7 +127,7 @@ export const findUpcomingBookingsByCustomer = async (
       .limit(limit)
       .lean(),
 
-    Booking.countDocuments(filter), // Count ab bilkul accurate hoga
+    Booking.countDocuments(filter),
   ]);
 
   return {
@@ -171,13 +179,16 @@ export const findPastBookingsByCustomer = async (
   };
 };
 
+// Booking status, including hold expiration for frontend countdowns
 export const findBookingStatusById = async (bookingId, customerId) => {
   return Booking.findOne({
     _id: bookingId,
     customerId,
     deletedAt: null,
   })
-    .select("appointmentCode statusId bookingDate startTime endTime")
+    .select(
+      "appointmentCode statusId bookingDate startTime endTime holdExpiresAt",
+    )
     .populate("statusId", "name type description")
     .lean();
 };
@@ -296,7 +307,7 @@ export const findBookingForRefundStatus = async (bookingId, customerId) => {
     .lean();
 };
 
-// Payment collection mein stored refund records
+// Find refund records stored in Payment collection
 export const findRefundPaymentsByBooking = async (bookingId) => {
   return Payment.find({
     bookingId,
@@ -334,8 +345,10 @@ export const findCurrentBooking = async (barberUserId, currentDateTime) => {
   }).lean();
 };
 
+// Find bookings for a barber on a specific date.
+// Populate status so availability can distinguish active and inactive bookings.
 export const findBookingsForDate = async (barberUserId, dateStart, dateEnd) => {
-  return await Booking.find({
+  return Booking.find({
     barberId: barberUserId,
     bookingDate: {
       $gte: dateStart,
@@ -344,18 +357,29 @@ export const findBookingsForDate = async (barberUserId, dateStart, dateEnd) => {
     deletedAt: null,
   })
     .select("startTime endTime statusId holdExpiresAt")
+    .populate("statusId", "name type")
     .lean();
 };
 
-export const createPendingBooking = async (bookingData) => {
-  return await Booking.create(bookingData);
-};
+export const createPendingBooking = async (
+  bookingData,
+  session = null,
+) => {
+  if (session) {
+    const [booking] = await Booking.create([bookingData], { session });
+    return booking;
+  }
 
+  return Booking.create(bookingData);
+};
+// Find all overlapping bookings.
+// The calling service must evaluate their statuses and active hold deadlines.
 export const findConflictingBookings = async (
   barberUserId,
   date,
   startTime,
   endTime,
+  session = null,
 ) => {
   return Booking.find({
     barberId: barberUserId,
@@ -365,6 +389,7 @@ export const findConflictingBookings = async (
     endTime: { $gt: startTime },
   })
     .populate("statusId", "name type")
+    .session(session)
     .lean();
 };
 
@@ -387,7 +412,7 @@ export const findActiveBookingsForDay = async (barberUserId, dateString) => {
     },
   }).select("_id");
 
-  return await Booking.find({
+  return Booking.find({
     barberId: barberUserId,
     bookingDate: { $gte: dateStart, $lt: dateEnd },
     statusId: { $in: activeStatuses.map((s) => s._id) },
@@ -400,7 +425,7 @@ export const findActiveBookingsForDay = async (barberUserId, dateString) => {
 };
 
 export const findBookingByIdAndBarber = async (bookingId, barberUserId) => {
-  return await Booking.findOne({
+  return Booking.findOne({
     _id: bookingId,
     barberId: barberUserId,
     deletedAt: null,
@@ -408,7 +433,7 @@ export const findBookingByIdAndBarber = async (bookingId, barberUserId) => {
 };
 
 export const updateBookingStatus = async (bookingId, newStatusId) => {
-  return await Booking.findByIdAndUpdate(
+  return Booking.findByIdAndUpdate(
     bookingId,
     { $set: { statusId: newStatusId } },
     { returnDocument: "after" },
@@ -417,8 +442,8 @@ export const updateBookingStatus = async (bookingId, newStatusId) => {
 
 export const findUpcomingBookingsByBarber = async (
   barberUserId,
-  todayDateStr, // YYYY-MM-DD
-  currentTimeStr, // HH:mm
+  todayDateStr,
+  currentTimeStr,
   statusIds,
   { page = 1, limit = 10 } = {},
 ) => {
@@ -427,12 +452,12 @@ export const findUpcomingBookingsByBarber = async (
   const filter = {
     barberId: barberUserId,
     deletedAt: null,
-    statusId: { $in: statusIds }, // Sirf active statuses
+    statusId: { $in: statusIds },
     $or: [
-      { bookingDate: { $gt: today } }, // Future dates
+      { bookingDate: { $gt: today } },
       {
-        bookingDate: today, // Aaj ki date
-        startTime: { $gte: currentTimeStr }, // Aaj ka future time
+        bookingDate: today,
+        startTime: { $gte: currentTimeStr },
       },
     ],
   };
@@ -442,7 +467,7 @@ export const findUpcomingBookingsByBarber = async (
       .populate("customerId", "name profilePhoto phone")
       .populate("branchId", "name address")
       .populate("statusId", "name")
-      .sort({ bookingDate: 1, startTime: 1 }) // recent one
+      .sort({ bookingDate: 1, startTime: 1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),
@@ -467,6 +492,17 @@ export const findCompletedBookingsByBarber = async (
     name: "COMPLETED",
     type: "BOOKING",
   });
+
+  if (!completedStatus) {
+    return {
+      bookings: [],
+      total: 0,
+      page,
+      limit,
+      totalPages: 0,
+    };
+  }
+
   const filter = {
     barberId: barberUserId,
     statusId: completedStatus._id,
@@ -480,9 +516,17 @@ export const findCompletedBookingsByBarber = async (
       .skip((page - 1) * limit)
       .limit(limit)
       .lean(),
+
     Booking.countDocuments(filter),
   ]);
-  return { bookings, total, page, limit, totalPages: Math.ceil(total / limit) };
+
+  return {
+    bookings,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
 export const findTodayBookingsByBarber = async (barberUserId, todayDate) => {
@@ -506,7 +550,7 @@ export const findTodayBookingsByBarber = async (barberUserId, todayDate) => {
     },
   }).select("_id");
 
-  return await Booking.find({
+  return Booking.find({
     barberId: barberUserId,
     bookingDate: { $gte: dateStart, $lt: dateEnd },
     statusId: { $in: activeStatuses.map((s) => s._id) },
@@ -526,7 +570,11 @@ export const findCompletedBookingById = async (bookingId, customerId) => {
     type: "BOOKING",
   });
 
-  return await Booking.findOne({
+  if (!completedStatus) {
+    return null;
+  }
+
+  return Booking.findOne({
     _id: bookingId,
     customerId,
     statusId: completedStatus._id,
@@ -539,7 +587,12 @@ export const markBookingAsNoShow = async (bookingId, barberUserId) => {
     name: "NO_SHOW",
     type: "BOOKING",
   });
-  return await Booking.findOneAndUpdate(
+
+  if (!noShowStatus) {
+    return null;
+  }
+
+  return Booking.findOneAndUpdate(
     { _id: bookingId, barberId: barberUserId, deletedAt: null },
     { $set: { statusId: noShowStatus._id } },
     { returnDocument: "after" },
