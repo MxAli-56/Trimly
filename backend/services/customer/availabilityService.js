@@ -58,17 +58,21 @@ const getDayOfWeek = (dateString) => {
 };
 
 
+
 export const getBarberAvailability = async (barberId, query = {}) => {
   const { date, serviceId } = query;
 
+  // Validate barber profile ID
   if (!mongoose.isValidObjectId(barberId)) {
     throw createError("Invalid barber profile ID");
   }
 
+  // Validate service ID
   if (!mongoose.isValidObjectId(serviceId)) {
     throw createError("Valid serviceId is required");
   }
 
+  // Validate date format
   if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     throw createError("Date must be in YYYY-MM-DD format");
   }
@@ -88,20 +92,25 @@ export const getBarberAvailability = async (barberId, query = {}) => {
     throw createError("Cannot check availability for past dates");
   }
 
+  // Find barber profile
   const barber = await barberProfileRepository.findBarberProfile(barberId);
 
   if (!barber) {
     throw createError("Barber not found", 404);
   }
 
-  if (!barber.branchId) {
+  // Get assigned branch ID
+  const branchId = barber.currentBranchId;
+
+  if (!branchId) {
     throw createError("Barber is not assigned to a salon", 400);
   }
 
+  // Check barber availability
   if (barber.isAvailable === false) {
     return {
       barberId,
-      branchId: barber.branchId,
+      branchId,
       date,
       isAvailable: false,
       totalAvailableSlots: 0,
@@ -110,13 +119,15 @@ export const getBarberAvailability = async (barberId, query = {}) => {
     };
   }
 
+  // Find active service
   const service = await serviceRepository.findActiveService(serviceId);
 
   if (!service) {
     throw createError("Service not found", 404);
   }
 
-  if (String(service.branchId) !== String(barber.branchId)) {
+  // Verify service belongs to barber's branch
+  if (String(service.branchId) !== String(branchId)) {
     throw createError("Service does not belong to barber's salon");
   }
 
@@ -126,17 +137,18 @@ export const getBarberAvailability = async (barberId, query = {}) => {
     throw createError("Invalid service duration", 500);
   }
 
+  // Get barber's schedule for selected day
   const dayOfWeek = getDayOfWeek(date);
 
   const schedule = await barberScheduleRepository.findScheduleByDay(
     barberId,
-    dayOfWeek,
+    dayOfWeek
   );
 
   if (!schedule || !schedule.isWorkingDay) {
     return {
       barberId,
-      branchId: barber.branchId,
+      branchId,
       date,
       dayOfWeek,
       isAvailable: false,
@@ -146,6 +158,7 @@ export const getBarberAvailability = async (barberId, query = {}) => {
     };
   }
 
+  // Validate working hours
   const workStart = toMinutes(schedule.startTime);
   const workEnd = toMinutes(schedule.endTime);
 
@@ -153,6 +166,7 @@ export const getBarberAvailability = async (barberId, query = {}) => {
     throw createError("Invalid barber schedule", 500);
   }
 
+  // Check break timings
   const hasBreak = Boolean(schedule.breakStart && schedule.breakEnd);
 
   const breakStart = hasBreak
@@ -165,13 +179,16 @@ export const getBarberAvailability = async (barberId, query = {}) => {
 
   if (
     hasBreak &&
-    (breakStart >= breakEnd ||
+    (
+      breakStart >= breakEnd ||
       breakStart < workStart ||
-      breakEnd > workEnd)
+      breakEnd > workEnd
+    )
   ) {
     throw createError("Invalid barber break schedule", 500);
   }
 
+  // Get bookings for selected date
   const dateStart = selectedDate;
 
   const dateEnd = new Date(
@@ -181,9 +198,10 @@ export const getBarberAvailability = async (barberId, query = {}) => {
   const bookings = await bookingRepository.findBookingsForDate(
     barber.userId,
     dateStart,
-    dateEnd,
+    dateEnd
   );
 
+  // Generate available slots
   const availableSlots = [];
 
   for (
@@ -193,10 +211,12 @@ export const getBarberAvailability = async (barberId, query = {}) => {
   ) {
     const end = start + duration;
 
+    // Skip past slots for today
     if (date === now.date && start <= now.minutes) {
       continue;
     }
 
+    // Skip slots overlapping barber's break
     if (
       hasBreak &&
       start < breakEnd &&
@@ -205,6 +225,7 @@ export const getBarberAvailability = async (barberId, query = {}) => {
       continue;
     }
 
+    // Check booking conflicts
     const hasConflict = bookings.some((booking) => {
       const bookingStart = toMinutes(booking.startTime);
       const bookingEnd = toMinutes(booking.endTime);
@@ -225,9 +246,10 @@ export const getBarberAvailability = async (barberId, query = {}) => {
     });
   }
 
+  // Return availability
   return {
     barberId,
-    branchId: barber.branchId,
+    branchId,
     serviceId,
     serviceName: service.name,
     date,
@@ -251,3 +273,4 @@ export const getBarberAvailability = async (barberId, query = {}) => {
     availableSlots,
   };
 };
+
