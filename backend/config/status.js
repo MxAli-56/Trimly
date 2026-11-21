@@ -2,6 +2,9 @@ export const STATUS_TYPES = Object.freeze({
   BOOKING: "BOOKING",
   PAYMENT: "PAYMENT",
   REFUND: "REFUND",
+  SCHEDULE_REQUEST: "SCHEDULE_REQUEST",
+  SCHEDULE_DAY: "SCHEDULE_DAY",
+  QUEUE: "QUEUE",
 });
 
 export const ALL_STATUS_TYPES = Object.values(STATUS_TYPES);

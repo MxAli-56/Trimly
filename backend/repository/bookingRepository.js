@@ -1,7 +1,15 @@
-
 import Booking from "../model/bookingModel.js";
 import Status from "../model/statusModel.js";
 import Payment from "../model/paymentModel.js";
+
+// Terminal statuses — booking slot no longer blocked
+const TERMINAL_BOOKING_STATUSES = [
+  "COMPLETED",
+  "CANCELLED",
+  "REJECTED",
+  "EXPIRED",
+  "NO_SHOW",
+];
 
 // Find initial booking status
 export const findBookingStatus = async (name, type) => {
@@ -43,6 +51,7 @@ export const findOverlappingBookings = async ({
     .populate("statusId", "name type")
     .lean();
 };
+
 // Fetch booking request details for the logged-in barber
 export const findBookingRequestDetailsByBarber = async (
   bookingId,
@@ -58,6 +67,7 @@ export const findBookingRequestDetailsByBarber = async (
     .populate("statusId", "name type")
     .lean();
 };
+
 export const findBookingStatuses = async () => {
   return Status.find({
     type: "BOOKING",
@@ -246,6 +256,7 @@ export const updateBookingCancellation = async (
       $set: {
         statusId: cancelledStatusId,
         cancelReason: reason,
+        isActive: false,
       },
     },
     { new: true, runValidators: true },
@@ -301,8 +312,8 @@ export const findBookingCancellationDetails = async (bookingId, customerId) => {
   })
     .select(
       "appointmentCode bookingDate startTime endTime " +
-      "statusId cancelReason totalAmount depositAmount " +
-      "branchId barberId updatedAt",
+        "statusId cancelReason totalAmount depositAmount " +
+        "branchId barberId updatedAt",
     )
     .populate("statusId", "name type description")
     .populate("branchId", "name address")
@@ -374,11 +385,9 @@ export const findBookingsForDate = async (barberUserId, dateStart, dateEnd) => {
     .populate("statusId", "name type")
     .lean();
 };
+
 // Create pending booking with optional MongoDB session
-export const createPendingBooking = async (
-  bookingData,
-  session = null,
-) => {
+export const createPendingBooking = async (bookingData, session = null) => {
   if (session) {
     const [booking] = await Booking.create([bookingData], { session });
     return booking;
@@ -391,7 +400,7 @@ export const createPendingBooking = async (
 export const findBookingNotificationById = async (bookingId) => {
   return Booking.findById(bookingId)
     .select(
-      "appointmentCode customerId barberId branchId services bookingDate startTime endTime totalAmount holdExpiresAt statusId"
+      "appointmentCode customerId barberId branchId services bookingDate startTime endTime totalAmount holdExpiresAt statusId",
     )
     .populate("customerId", "name profilePhoto")
     .populate("branchId", "name")
@@ -438,10 +447,14 @@ export const findBookingByIdAndBarber = async (bookingId, barberUserId) => {
   }).populate("statusId", "name type");
 };
 
+// FIX: Auto-set isActive based on status name (terminal → false)
 export const updateBookingStatus = async (bookingId, newStatusId) => {
+  const statusDoc = await Status.findById(newStatusId).select("name").lean();
+  const isActive = !TERMINAL_BOOKING_STATUSES.includes(statusDoc?.name);
+
   return Booking.findByIdAndUpdate(
     bookingId,
-    { $set: { statusId: newStatusId } },
+    { $set: { statusId: newStatusId, isActive } },
     { returnDocument: "after" },
   );
 };
@@ -600,7 +613,7 @@ export const markBookingAsNoShow = async (bookingId, barberUserId) => {
 
   return Booking.findOneAndUpdate(
     { _id: bookingId, barberId: barberUserId, deletedAt: null },
-    { $set: { statusId: noShowStatus._id } },
+    { $set: { statusId: noShowStatus._id, isActive: false } },
     { returnDocument: "after" },
   );
 };

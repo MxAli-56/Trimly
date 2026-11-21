@@ -12,6 +12,7 @@ import * as bookingActionService from "../services/booking/bookingActionService.
 import * as offPeakBookingService from "../services/booking/offPeakBookingService.js";
 import * as barberRescheduleService from "../services/booking/barberRescheduleService.js";
 import * as barberOperationService from "../services/barber/barberOperationService.js";
+import * as queueService from "../services/booking/queueService.js";
 
 import {
   getMyBookings,
@@ -539,5 +540,20 @@ export const markBookingNoShow = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const getQueueStatus = async (req, res) => {
+  try {
+    const customerId = getAuthUserId(req);
+    if (!customerId) return unauthorized(res);
+
+    const result = await queueService.getQueueStatus(req.params.queueId, customerId);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    if (error.message === "QUEUE_NOT_FOUND") return res.status(404).json({ success: false, message: "Queue entry not found" });
+    if (error.message === "UNAUTHORIZED") return res.status(403).json({ success: false, message: "Not your queue entry" });
+    if (error.message === "INVALID_QUEUE_ID") return res.status(400).json({ success: false, message: "Invalid queue ID" });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

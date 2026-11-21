@@ -2,30 +2,34 @@ import "../config/env.js";
 import mongoose from "mongoose";
 import { setServers } from "dns";
 import Status from "../model/statusModel.js";
+import Booking from "../model/bookingModel.js";
+import Payment from "../model/paymentModel.js";
+import Refund from "../model/refundModel.js";
+import ScheduleUpdateRequest from "../model/scheduleUpdateRequestModel.js";
 
 setServers(["8.8.8.8", "1.1.1.1"]);
 
 const statuses = [
-  // BOOKING Statuses (Your exact flow)
+  // BOOKING
   {
     name: "PENDING_BARBER",
     type: "BOOKING",
-    description: "Waiting for barber to accept (2 mins)",
+    description: "Waiting for barber to accept (2 min)",
   },
   {
     name: "PENDING_CUSTOMER",
     type: "BOOKING",
-    description: "Barber accepted, waiting for payment (3 mins)",
+    description: "Barber accepted, waiting for customer payment (3 min)",
   },
   {
     name: "PENDING_CUSTOMER_RESCHEDULE",
     type: "BOOKING",
-    description: "Barber proposed a new time, waiting for customer response",
+    description: "Barber proposed new time, waiting for customer response",
   },
   {
     name: "PENDING_BARBER_APPROVAL",
     type: "BOOKING",
-    description: "Off-peak booking paid, waiting for barber final approval",
+    description: "Off-peak paid, waiting for barber final approval",
   },
   {
     name: "CONFIRMED",
@@ -44,66 +48,38 @@ const statuses = [
     description: "Cancelled by customer or barber",
   },
   { name: "REJECTED", type: "BOOKING", description: "Rejected by barber" },
-  {
-    name: "EXPIRED",
-    type: "BOOKING",
-    description: "Timer ran out or auto-cancelled",
-  },
+  { name: "EXPIRED", type: "BOOKING", description: "Timer ran out" },
+  { name: "NO_SHOW", type: "BOOKING", description: "Customer did not arrive" },
 
-  // PAYMENT Statuses
+  // PAYMENT
   { name: "PENDING", type: "PAYMENT", description: "Payment initiated" },
   { name: "SUCCESS", type: "PAYMENT", description: "Payment successful" },
   { name: "FAILED", type: "PAYMENT", description: "Payment failed" },
 
-  // REFUND Statuses
+  // REFUND
   { name: "PENDING", type: "REFUND", description: "Refund initiated" },
   { name: "PROCESSED", type: "REFUND", description: "Refund completed" },
 
-  //Non-working hours booking approval
-  {
-    name: "PENDING_BARBER_APPROVAL",
-    type: "BOOKING",
-    description: "Off-peak booking paid, waiting for barber to accept",
-  },
-
-  {
-    name: "NO_SHOW",
-    type: "BOOKING",
-    description: "Customer did not arrive for the appointment",
-  },
-
-  // SCHEDULE_DAY Statuses (Individual Days)
+  // SCHEDULE_DAY
   {
     name: "PENDING",
     type: "SCHEDULE_DAY",
     description: "Waiting for owner approval",
   },
-  {
-    name: "APPROVED",
-    type: "SCHEDULE_DAY",
-    description: "Owner approved this day",
-  },
-  {
-    name: "REJECTED",
-    type: "SCHEDULE_DAY",
-    description: "Owner rejected this day",
-  },
-  {
-    name: "APPLIED",
-    type: "SCHEDULE_DAY",
-    description: "Change applied to schedule",
-  },
+  { name: "APPROVED", type: "SCHEDULE_DAY", description: "Owner approved" },
+  { name: "REJECTED", type: "SCHEDULE_DAY", description: "Owner rejected" },
+  { name: "APPLIED", type: "SCHEDULE_DAY", description: "Change applied" },
 
-  // SCHEDULE_REQUEST Statuses (Overall Request)
+  // SCHEDULE_REQUEST
   {
     name: "PENDING_OWNER_APPROVAL",
     type: "SCHEDULE_REQUEST",
-    description: "Waiting for owner to review",
+    description: "Waiting for owner review",
   },
   {
     name: "PARTIALLY_APPROVED",
     type: "SCHEDULE_REQUEST",
-    description: "Some days approved, some rejected",
+    description: "Some approved, some rejected",
   },
   {
     name: "FULLY_APPROVED",
@@ -115,16 +91,15 @@ const statuses = [
     type: "SCHEDULE_REQUEST",
     description: "All days rejected",
   },
-  {
-    name: "EXPIRED",
-    type: "SCHEDULE_REQUEST",
-    description: "7 days passed without owner action",
-  },
+  { name: "EXPIRED", type: "SCHEDULE_REQUEST", description: "7 days passed" },
   {
     name: "APPLIED",
     type: "SCHEDULE_REQUEST",
-    description: "Changes applied to schedule",
+    description: "Applied to schedule",
   },
+  { name: "WAITING", type: "QUEUE", description: "Waiting in line for slot" },
+  { name: "PROMOTED", type: "QUEUE", description: "Slot offered, converted to booking" },
+  { name: "EXPIRED", type: "QUEUE", description: "Queue entry expired" },
 ];
 
 const seedStatuses = async () => {
@@ -132,15 +107,21 @@ const seedStatuses = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("✅ MongoDB connected");
 
+    // Clear old data that depends on statuses
+    await Booking.deleteMany({});
+    await Payment.deleteMany({});
+    await Refund.deleteMany({});
+    await ScheduleUpdateRequest.deleteMany({});
+    await Status.deleteMany({});
+    console.log(
+      "🧹 Cleared: bookings, payments, refunds, schedule requests, statuses",
+    );
+
     for (const status of statuses) {
-      await Status.findOneAndUpdate(
-        { name: status.name, type: status.type },
-        { $set: status },
-        { upsert: true, returnDocument: "after" },
-      );
+      await Status.create(status);
     }
 
-    console.log("🎉 All statuses seeded successfully!");
+    console.log(`🎉 ${statuses.length} statuses seeded successfully!`);
   } catch (error) {
     console.error("❌ Seeding failed:", error);
   } finally {

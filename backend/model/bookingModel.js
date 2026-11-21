@@ -80,6 +80,10 @@ const bookingSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
     cancelReason: {
       type: String,
       default: null,
@@ -104,6 +108,16 @@ bookingSchema.index({
 });
 bookingSchema.index({ branchId: 1 });
 bookingSchema.index({ holdExpiresAt: 1 });
+
+// FIX: Race condition prevention — unique active booking per barber/date/startTime
+bookingSchema.index(
+  { barberId: 1, bookingDate: 1, startTime: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isActive: true },
+    name: "unique_active_booking_slot",
+  },
+);
 
 const Booking = mongoose.model("Booking", bookingSchema);
 

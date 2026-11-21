@@ -22,6 +22,7 @@ import {
   startBarberBooking,
   completeBarberBooking,
   markBookingNoShow,
+  getQueueStatus,
 } from "../controller/bookingController.js";
 
 import authenticate from "../middleware/Auth.js";
@@ -31,7 +32,7 @@ import { ROLES } from "../config/role.js";
 
 import { createBookingSchema, offPeakBookingSchema } from "../validation/booking/createBookingValidation.js";
 import { rejectBookingSchema, offPeakActionSchema, barberRescheduleSchema, respondRescheduleSchema } from "../validation/booking/bookingActionValidation.js";
-import { bookingIdParamSchema } from "../validation/booking/paramValidation.js"; // Import param validation
+import { bookingIdParamSchema, queueIdParamSchema } from "../validation/booking/paramValidation.js"; // Import param validations
 
 const router = express.Router();
 
@@ -47,6 +48,9 @@ router.post("/off-peak", requiredRoles(ROLES.CUSTOMER), validateBody(offPeakBook
 router.get("/", requiredRoles(ROLES.CUSTOMER), getCustomerBookings);
 router.get("/upcoming", requiredRoles(ROLES.CUSTOMER), getCustomerUpcomingBookings);
 router.get("/past", requiredRoles(ROLES.CUSTOMER), getCustomerPastBookings);
+
+// IMPORTANT: Queue route must come BEFORE /:bookingId routes
+router.get("/queue/:queueId", requiredRoles(ROLES.CUSTOMER), validateParams(queueIdParamSchema), getQueueStatus);
 
 // validateParams added to all routes with :bookingId
 router.get("/:bookingId", requiredRoles(ROLES.CUSTOMER), validateParams(bookingIdParamSchema), getCustomerBookingById);

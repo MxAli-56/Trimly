@@ -5,6 +5,7 @@ import Payment from "../../model/paymentModel.js";
 import Refund from "../../model/refundModel.js";
 import * as barberProfileRepository from "../../repository/barberProfileRepository.js";
 import * as serviceRepository from "../../repository/serviceRepository.js";
+import * as bookingRepository from "../../repository/bookingRepository.js";
 
 const getStatus = async (name) => {
   const status = await Status.findOne({ name, type: "BOOKING" });
@@ -19,7 +20,11 @@ export const createOffPeakBooking = async (customerId, payload) => {
     await barberProfileRepository.findBarberProfile(barberProfileId);
   if (!barber) throw new Error("BARBER_NOT_FOUND");
 
-  const services = await serviceRepository.findServicesByIds(serviceIds);
+  // FIX: branchId pass karo
+  const services = await serviceRepository.findServicesByIds(
+    serviceIds,
+    barber.currentBranchId,
+  );
   if (services.length !== serviceIds.length)
     throw new Error("INVALID_SERVICES");
 
@@ -42,24 +47,40 @@ export const createOffPeakBooking = async (customerId, payload) => {
 
   const bookingDate = new Date(`${date}T00:00:00.000Z`);
 
-const conflicts = await bookingRepository.findConflictingBookings(
-  barber.userId,
-  bookingDate,
-  startTime,
-  endTime,
-);
+  // FIX: Correct function name + object args
+  const bookingDateEnd = new Date(bookingDate.getTime() + 24 * 60 * 60 * 1000);
 
-const activeConflict = conflicts.some((c) => {
-  const statusName = c.statusId?.name;
-  if (["CONFIRMED", "IN_PROGRESS", "COMPLETED"].includes(statusName))
-    return true;
-  if (statusName === "PENDING" && c.holdExpiresAt > new Date()) return true;
-  // Off-peak pending approval wali bhi block karegi agar woh future ka same slot hai
-  if (statusName === "PENDING_BARBER_APPROVAL") return true;
-  return false;
-});
+  const conflicts = await bookingRepository.findOverlappingBookings({
+    barberUserId: barber.userId,
+    dateStart: bookingDate,
+    dateEnd: bookingDateEnd,
+    startTime,
+    endTime,
+  });
 
-if (activeConflict) throw new Error("SLOT_NOT_AVAILABLE");
+  // FIX: Correct status names + added missing statuses
+  const activeConflict = conflicts.some((c) => {
+    const statusName = c.statusId?.name;
+    if (
+      [
+        "CONFIRMED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "PENDING_CUSTOMER_RESCHEDULE",
+        "PENDING_BARBER_APPROVAL",
+      ].includes(statusName)
+    )
+      return true;
+    if (
+      ["PENDING_BARBER", "PENDING_CUSTOMER"].includes(statusName) &&
+      c.holdExpiresAt &&
+      new Date(c.holdExpiresAt) > new Date()
+    )
+      return true;
+    return false;
+  });
+
+  if (activeConflict) throw new Error("SLOT_NOT_AVAILABLE");
 
   const pendingStatus = await getStatus("PENDING_BARBER_APPROVAL");
   const depositAmount = totalAmount * 0.3;

@@ -1,4 +1,3 @@
-
 import Booking from "../../model/bookingModel.js";
 import Status from "../../model/statusModel.js";
 
@@ -30,16 +29,14 @@ export const acceptBooking = async (barberUserId, bookingId) => {
     throw new Error("BOOKING_NOT_FOUND");
   }
 
-  const pendingStatus = await getStatus("PENDING");
+  // FIX: PENDING_BARBER (not PENDING)
+  const pendingStatus = await getStatus("PENDING_BARBER");
 
   if (String(booking.statusId) !== String(pendingStatus._id)) {
     throw new Error("INVALID_STATE");
   }
 
-  if (
-    !booking.holdExpiresAt ||
-    new Date(booking.holdExpiresAt) <= new Date()
-  ) {
+  if (!booking.holdExpiresAt || new Date(booking.holdExpiresAt) <= new Date()) {
     const expiredStatus = await getStatus("EXPIRED");
 
     await Booking.findByIdAndUpdate(
@@ -49,13 +46,14 @@ export const acceptBooking = async (barberUserId, bookingId) => {
       },
       {
         returnDocument: "after",
-      }
+      },
     );
 
     throw new Error("TIMER_EXPIRED");
   }
 
-  const acceptedStatus = await getStatus("ACCEPTED");
+  // FIX: PENDING_CUSTOMER (not ACCEPTED)
+  const pendingCustomerStatus = await getStatus("PENDING_CUSTOMER");
 
   // Customer gets 3 minutes to pay deposit
   const newHoldExpiresAt = new Date(Date.now() + 3 * 60 * 1000);
@@ -63,20 +61,19 @@ export const acceptBooking = async (barberUserId, bookingId) => {
   const updatedBooking = await Booking.findByIdAndUpdate(
     bookingId,
     {
-      statusId: acceptedStatus._id,
+      statusId: pendingCustomerStatus._id,
       holdExpiresAt: newHoldExpiresAt,
     },
     {
       returnDocument: "after",
-    }
+    },
   );
 
   return {
     bookingId: updatedBooking._id,
-    status: "ACCEPTED",
+    status: "PENDING_CUSTOMER",
     holdExpiresAt: newHoldExpiresAt,
-    message:
-      "Booking accepted. Customer has 3 minutes to pay the deposit.",
+    message: "Booking accepted. Customer has 3 minutes to pay the deposit.",
   };
 };
 
@@ -84,11 +81,7 @@ export const acceptBooking = async (barberUserId, bookingId) => {
 // REJECT BOOKING
 // ==========================================
 
-export const rejectBooking = async (
-  barberUserId,
-  bookingId,
-  reason
-) => {
+export const rejectBooking = async (barberUserId, bookingId, reason) => {
   const booking = await Booking.findOne({
     _id: bookingId,
     barberId: barberUserId,
@@ -99,7 +92,8 @@ export const rejectBooking = async (
     throw new Error("BOOKING_NOT_FOUND");
   }
 
-  const pendingStatus = await getStatus("PENDING");
+  // FIX: PENDING_BARBER (not PENDING)
+  const pendingStatus = await getStatus("PENDING_BARBER");
 
   if (String(booking.statusId) !== String(pendingStatus._id)) {
     throw new Error("INVALID_STATE");
@@ -115,7 +109,7 @@ export const rejectBooking = async (
     },
     {
       returnDocument: "after",
-    }
+    },
   );
 
   return {
@@ -141,16 +135,14 @@ export const payDeposit = async (customerId, bookingId) => {
     throw new Error("BOOKING_NOT_FOUND");
   }
 
-  const acceptedStatus = await getStatus("ACCEPTED");
+  // FIX: PENDING_CUSTOMER (not ACCEPTED)
+  const pendingCustomerStatus = await getStatus("PENDING_CUSTOMER");
 
-  if (String(booking.statusId) !== String(acceptedStatus._id)) {
+  if (String(booking.statusId) !== String(pendingCustomerStatus._id)) {
     throw new Error("INVALID_STATE");
   }
 
-  if (
-    !booking.holdExpiresAt ||
-    new Date(booking.holdExpiresAt) <= new Date()
-  ) {
+  if (!booking.holdExpiresAt || new Date(booking.holdExpiresAt) <= new Date()) {
     const expiredStatus = await getStatus("EXPIRED");
 
     await Booking.findByIdAndUpdate(
@@ -160,7 +152,7 @@ export const payDeposit = async (customerId, bookingId) => {
       },
       {
         returnDocument: "after",
-      }
+      },
     );
 
     throw new Error("TIMER_EXPIRED");
@@ -178,7 +170,7 @@ export const payDeposit = async (customerId, bookingId) => {
     },
     {
       returnDocument: "after",
-    }
+    },
   );
 
   return {

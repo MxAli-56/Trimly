@@ -42,9 +42,7 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     typeof date !== "string" ||
     !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
     !Number.isFinite(Date.parse(`${date}T00:00:00.000Z`)) ||
-    new Date(`${date}T00:00:00.000Z`)
-      .toISOString()
-      .slice(0, 10) !== date
+    new Date(`${date}T00:00:00.000Z`).toISOString().slice(0, 10) !== date
   ) {
     throw new Error("INVALID_DATE");
   }
@@ -67,7 +65,7 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
   // Fetch active services belonging to the barber's branch
   const services = await serviceRepository.findServicesByIds(
     serviceIds,
-    branchId
+    branchId,
   );
 
   if (services.length !== serviceIds.length) {
@@ -100,8 +98,7 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
   // Calculate booking end time
   const [startHour, startMin] = startTime.split(":").map(Number);
 
-  const endTotalMin =
-    startHour * 60 + startMin + totalDuration;
+  const endTotalMin = startHour * 60 + startMin + totalDuration;
 
   if (endTotalMin > 24 * 60) {
     throw new Error("INVALID_BOOKING_DURATION");
@@ -113,25 +110,35 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
 
   const bookingDate = new Date(`${date}T00:00:00.000Z`);
 
-  // Check existing booking conflicts
-  const conflicts = await bookingRepository.findConflictingBookings(
-    barber.userId,
-    bookingDate,
-    startTime,
-    endTime
-  );
+  // FIX: Correct function name + object args
+  const bookingDateEnd = new Date(bookingDate.getTime() + 24 * 60 * 60 * 1000);
 
+  const conflicts = await bookingRepository.findOverlappingBookings({
+    barberUserId: barber.userId,
+    dateStart: bookingDate,
+    dateEnd: bookingDateEnd,
+    startTime,
+    endTime,
+  });
+
+  // FIX: Correct status names + added missing statuses
   const activeConflict = conflicts.some((booking) => {
     const statusName = booking.statusId?.name;
 
     if (
-      ["CONFIRMED", "IN_PROGRESS", "COMPLETED"].includes(statusName)
+      [
+        "CONFIRMED",
+        "IN_PROGRESS",
+        "COMPLETED",
+        "PENDING_CUSTOMER_RESCHEDULE",
+        "PENDING_BARBER_APPROVAL",
+      ].includes(statusName)
     ) {
       return true;
     }
 
     if (
-      statusName === "PENDING" &&
+      ["PENDING_BARBER", "PENDING_CUSTOMER"].includes(statusName) &&
       booking.holdExpiresAt &&
       new Date(booking.holdExpiresAt) > new Date()
     ) {
@@ -141,13 +148,24 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     return false;
   });
 
-  if (activeConflict) {
-    throw new Error("SLOT_NOT_AVAILABLE");
-  }
+    if (activeConflict) {
+      // FIX: Instead of throwing error, add to queue
+      const queueService = await import("./queueService.js");
+      const queueResult = await queueService.addToQueue({
+        barberId: barber.userId,
+        branchId,
+        customerId,
+        bookingDate,
+        startTime,
+        endTime,
+        serviceIds,
+      });
+      return queueResult;
+    }
 
-  // Get pending booking status
+  // FIX: PENDING_BARBER (not PENDING)
   const pendingStatus = await Status.findOne({
-    name: "PENDING",
+    name: "PENDING_BARBER",
     type: "BOOKING",
   });
 
@@ -158,8 +176,7 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
   // Barber has 2 minutes to accept
   const holdExpiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
-  const appointmentCode =
-    `TRM-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+  const appointmentCode = `TRM-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
 
   const depositAmount = totalAmount * 0.3;
 
@@ -181,7 +198,6 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
   });
   // Fetch populated booking details for notification
 
-
   // Notify the assigned barber
   try {
     const notificationBooking =
@@ -195,8 +211,7 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
         customer: {
           id: String(customerId),
           name: notificationBooking?.customerId?.name || "Customer",
-          profilePhoto:
-            notificationBooking?.customerId?.profilePhoto || null,
+          profilePhoto: notificationBooking?.customerId?.profilePhoto || null,
         },
 
         branch: {
@@ -211,12 +226,10 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
         totalAmount,
         depositAmount,
         holdExpiresAt: booking.holdExpiresAt,
-        status: "PENDING",
+        status: "PENDING_BARBER",
       });
 
-    console.log(
-      `New booking notification sent to barber: ${booking.barberId}`
-    );
+    console.log(`New booking notification sent to barber: ${booking.barberId}`);
   } catch (socketError) {
     console.error("Booking notification error:", socketError.message);
   }
@@ -235,8 +248,7 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     totalAmount,
     depositAmount,
     holdExpiresAt,
-    status: "PENDING",
+    status: "PENDING_BARBER",
     message: "Booking requested. Barber has 2 minutes to accept.",
   };
-
 };
