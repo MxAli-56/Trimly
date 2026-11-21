@@ -1,6 +1,13 @@
 import Joi from "joi";
 
 export const addBarberSchema = Joi.object({
+  branchId: Joi.string()
+    .regex(/^[0-9a-fA-F]{24}$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Invalid Branch ID format",
+      "any.required": "Branch ID is required",
+    }),
   phoneNumber: Joi.string()
     .pattern(/^\+?[0-9]{11,13}$/)
     .required()

@@ -62,9 +62,13 @@ export const SetBarberSchedule = async (req, res) => {
 export const AddBarber = async (req, res) => {
   try {
     const ownerId = req.user.id;
-    const { phoneNumber } = req.body;
+    const { branchId, phoneNumber } = req.body;
 
-    const profile = await ownerSalonBarberService.addBarberToSalon(ownerId, phoneNumber);
+    const profile = await ownerSalonBarberService.addBarberToSalon(
+      ownerId,
+      branchId,
+      phoneNumber,
+    );
 
     return res.status(201).json({
       success: true,
@@ -72,11 +76,38 @@ export const AddBarber = async (req, res) => {
       data: profile,
     });
   } catch (error) {
-    if (error.message === "BRANCH_NOT_FOUND") return res.status(404).json({ success: false, message: "Salon not found" });
-    if (error.message === "USER_NOT_FOUND") return res.status(404).json({ success: false, message: "No user found with this phone number" });
-    if (error.message === "USER_NOT_BARBER") return res.status(400).json({ success: false, message: "This user is not registered as a Barber" });
-    if (error.message === "ALREADY_IN_SALON") return res.status(409).json({ success: false, message: "This barber is already working at a salon" });
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    if (error.message === "BRANCH_NOT_FOUND")
+      return res
+        .status(404)
+        .json({ success: false, message: "Salon not found" });
+    if (error.message === "UNAUTHORIZED")
+      return res
+        .status(403)
+        .json({ success: false, message: "This salon does not belong to you" });
+    if (error.message === "USER_NOT_FOUND")
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: "No user found with this phone number",
+        });
+    if (error.message === "USER_NOT_BARBER")
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "This user is not registered as a Barber",
+        });
+    if (error.message === "ALREADY_IN_SALON")
+      return res
+        .status(409)
+        .json({
+          success: false,
+          message: "This barber is already working at a salon",
+        });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
