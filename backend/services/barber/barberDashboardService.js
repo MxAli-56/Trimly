@@ -111,6 +111,7 @@ export const getBarberUpcomingBookings = async (barberUserId, query = {}) => {
     type: "BOOKING",
     name: {
       $in: [
+        "PENDING",
         "PENDING_BARBER",
         "PENDING_CUSTOMER",
         "PENDING_CUSTOMER_RESCHEDULE",

@@ -112,7 +112,19 @@ const useBarberStore = create((set, get) => ({
   stats: EMPTY_STATS,
   isAvailable: true,
   dashboardLoading: false,
+  // Incoming Booking Request Details
+  bookingRequestDetails: null,
+  bookingRequestLoading: false,
+  bookingRequestError: null,
 
+  // Incoming Booking Notification
+  incomingBookingRequest: null,
+  // Incoming Booking Notification Actions
+  setIncomingBookingRequest: (booking) =>
+    set({ incomingBookingRequest: booking }),
+
+  clearIncomingBookingRequest: () =>
+    set({ incomingBookingRequest: null }),
   // Daily Timeline state
   dailyTimeline: null,
   timelineLoading: false,
@@ -180,6 +192,67 @@ const useBarberStore = create((set, get) => ({
     } finally {
       set({ dashboardLoading: false });
     }
+  },
+
+  // GET /api/barber/booking-requests/:bookingId
+  fetchBookingRequestDetails: async (bookingId) => {
+    const token = useAuthStore.getState().token;
+
+    if (!token) {
+      return {
+        success: false,
+        error: 'Authentication token not found.',
+      };
+    }
+
+    set({
+      bookingRequestLoading: true,
+      bookingRequestError: null,
+      bookingRequestDetails: null,
+    });
+
+    try {
+      const res = await barberService.getBookingRequestDetails(
+        bookingId,
+        token
+      );
+
+      const booking = res.data;
+
+      set({
+        bookingRequestDetails: booking,
+      });
+
+      return {
+        success: true,
+        data: booking,
+      };
+    } catch (error) {
+      const message = getError(
+        error,
+        'Unable to load booking request details.'
+      );
+
+      set({
+        bookingRequestError: message,
+      });
+
+      return {
+        success: false,
+        error: message,
+      };
+    } finally {
+      set({
+        bookingRequestLoading: false,
+      });
+    }
+  },
+  clearBookingRequestDetails: () => {
+    set({
+      bookingRequestDetails: null,
+      bookingRequestError: null,
+      bookingRequestLoading: false,
+    });
   },
   // GET /api/barber/dashboard/timeline?date=YYYY-MM-DD
   fetchDailyTimeline: async (date = getLocalDateString()) => {
@@ -576,29 +649,38 @@ const useBarberStore = create((set, get) => ({
   },
 
   // Reset store
+  // Reset store
   reset: () =>
     set({
       appointments: [],
       stats: EMPTY_STATS,
       isAvailable: true,
       dashboardLoading: false,
+
+      incomingBookingRequest: null,
+
+      bookingRequestDetails: null,
+      bookingRequestLoading: false,
+      bookingRequestError: null,
+
       dailyTimeline: null,
       timelineLoading: false,
       timelineError: null,
+
       schedule: [],
       scheduleLoading: false,
       scheduleError: null,
 
       scheduleRequests: [],
-      // Temporary leave state
+      scheduleRequestsLoading: false,
+      scheduleRequestSubmitting: false,
+      scheduleRequestError: null,
+
       leaves: [],
       leavesLoading: false,
       leaveSubmitting: false,
       leaveDeletingId: null,
       leaveError: null,
-      scheduleRequestsLoading: false,
-      scheduleRequestSubmitting: false,
-      scheduleRequestError: null,
     }),
 }));
 

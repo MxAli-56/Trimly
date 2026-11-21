@@ -109,6 +109,11 @@ const CustomerProfileScreen = () => {
   const navigation = useNavigation();
   const { user, logout } = useAuthStore();
 
+  const openFavorites = () => {
+    navigation.getParent()?.navigate('Explore', {
+      screen: 'Favorites',
+    });
+  };
   const [activeModal, setActiveModal] = useState(null);
 
   const name = user?.name || 'Customer';
@@ -356,13 +361,13 @@ const CustomerProfileScreen = () => {
         {/* Saved & Engagement */}
         <MenuSection title="SAVED & ENGAGEMENT">
           <MenuRow
-            icon="heart"
-            title="Saved Salons & Barbers"
-            subtitle="Your favourite places will appear here"
-            iconColor="#8C6337"
-            iconBackground="#F5EFE6"
-            onPress={() => openModal('saved')}
-          />
+  icon="heart"
+  title="Saved Salons & Barbers"
+  subtitle="Your favourite places and professionals"
+  iconColor="#8C6337"
+  iconBackground="#F5EFE6"
+  onPress={openFavorites}
+/>
 
           <View style={styles.divider} />
 

@@ -7,6 +7,7 @@ import { getRefundStatus } from "../services/booking/refundStatusService.js";
 import { getAppointmentCode } from "../services/booking/appointmentCodeService.js";
 import { checkCancellationEligibility } from "../services/booking/cancellationEligibilityService.js";
 import { requestBookingWithTimer } from "../services/booking/requestBookingService.js";
+import { getBarberBookingRequestDetailsService } from "../services/booking/barberBookingRequestService";
 import * as bookingActionService from "../services/booking/bookingActionService.js";
 import * as offPeakBookingService from "../services/booking/offPeakBookingService.js";
 import * as barberRescheduleService from "../services/booking/barberRescheduleService.js";
@@ -135,6 +136,25 @@ export const getCustomerBookings = (req, res) => {
 
   return run(res, "getCustomerBookings", () =>
     getMyBookings(userId, req.query),
+  );
+};
+
+export const getBarberBookingRequestDetails = async (req, res) => {
+  const barberUserId = getAuthUserId(req);
+  const bookingId = req.params.bookingId;
+
+  if (!barberUserId) {
+    return unauthorized(res);
+  }
+
+  return run(
+    res,
+    "getBarberBookingRequestDetails",
+    () =>
+      getBarberBookingRequestDetailsService(
+        barberUserId,
+        bookingId
+      )
   );
 };
 

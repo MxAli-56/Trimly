@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,7 +14,47 @@ import { Ionicons } from '@expo/vector-icons';
 
 import Colors from '../../../constants/Colors';
 import salonService from '../../../services/salonService';
+import favoriteService from '../../../services/favoriteService';
 import useAuthStore from '../../../store/useAuthStore';
+
+const getBarberList = (response) => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.barbers)) return response.barbers;
+  if (Array.isArray(response?.data?.barbers)) {
+    return response.data.barbers;
+  }
+  if (Array.isArray(response?.data)) return response.data;
+
+  return [];
+};
+
+const getBarberName = (barber) => {
+  return (
+    barber.userId?.name ||
+    barber.user?.name ||
+    barber.name ||
+    barber.fullName ||
+    'Barber'
+  );
+};
+
+const getBarberPhoto = (barber) => {
+  const photo =
+    barber.userId?.profilePhoto ||
+    barber.user?.profilePhoto ||
+    barber.profilePhoto;
+
+  if (typeof photo === 'string') return photo;
+  return photo?.url || photo?.secure_url || null;
+};
+
+const getBarberSpecialties = (barber) => {
+  if (!Array.isArray(barber.specialties)) return [];
+
+  return barber.specialties.map((item) =>
+    typeof item === 'string' ? item : item?.name || ''
+  ).filter(Boolean);
+};
 
 const SalonDetailsScreen = ({ navigation, route }) => {
   const { branchId } = route.params || {};
@@ -21,7 +62,10 @@ const SalonDetailsScreen = ({ navigation, route }) => {
 
   const [salon, setSalon] = useState(null);
   const [services, setServices] = useState([]);
+  const [barbers, setBarbers] = useState([]);
   const [selectedServices, setSelectedServices] = useState([]);
+  const [favoriteBarberIds, setFavoriteBarberIds] = useState(new Set());
+  const [favoriteLoadingIds, setFavoriteLoadingIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -43,6 +87,7 @@ const SalonDetailsScreen = ({ navigation, route }) => {
         setLoading(true);
         setError('');
         setSelectedServices([]);
+        setBarbers([]);
 
         const [salonData, serviceData] = await Promise.all([
           salonService.getSalonDetails(branchId, token),
@@ -58,6 +103,43 @@ const SalonDetailsScreen = ({ navigation, route }) => {
             ? serviceData.filter((service) => service.isActive === true)
             : []
         );
+
+        // Fetch barbers and favourites independently.
+        // A barber/favourite API failure should not break salon details.
+        try {
+          const barberResponse = await salonService.getSalonBarbers(
+            branchId,
+            token
+          );
+
+          if (isMounted) {
+            setBarbers(getBarberList(barberResponse));
+          }
+        } catch (barberError) {
+          if (isMounted) setBarbers([]);
+        }
+
+        try {
+          const favoriteResponse =
+            await favoriteService.getFavoriteBarbers(token);
+
+          if (!isMounted) return;
+
+          const favorites = Array.isArray(favoriteResponse?.favorites)
+            ? favoriteResponse.favorites
+            : [];
+
+          setFavoriteBarberIds(
+            new Set(
+              favorites
+                .map((item) => item.barber?._id || item.barberId)
+                .filter(Boolean)
+                .map(String)
+            )
+          );
+        } catch (favoriteError) {
+          if (isMounted) setFavoriteBarberIds(new Set());
+        }
       } catch (err) {
         if (!isMounted) return;
 
@@ -121,6 +203,56 @@ const SalonDetailsScreen = ({ navigation, route }) => {
 
       return [...current, service];
     });
+  };
+
+  const toggleFavoriteBarber = async (barber) => {
+    const barberId = barber._id;
+
+    if (!barberId || favoriteLoadingIds.has(String(barberId))) {
+      return;
+    }
+
+    const id = String(barberId);
+    const isFavorite = favoriteBarberIds.has(id);
+
+    setFavoriteLoadingIds((current) => {
+      const updated = new Set(current);
+      updated.add(id);
+      return updated;
+    });
+
+    try {
+      if (isFavorite) {
+        await favoriteService.removeFavoriteBarber(barberId, token);
+
+        setFavoriteBarberIds((current) => {
+          const updated = new Set(current);
+          updated.delete(id);
+          return updated;
+        });
+      } else {
+        await favoriteService.addFavoriteBarber(barberId, token);
+
+        setFavoriteBarberIds((current) => {
+          const updated = new Set(current);
+          updated.add(id);
+          return updated;
+        });
+      }
+    } catch (err) {
+      Alert.alert(
+        'Unable to update favourites',
+        err.response?.data?.message ||
+          err.message ||
+          'Please try again.'
+      );
+    } finally {
+      setFavoriteLoadingIds((current) => {
+        const updated = new Set(current);
+        updated.delete(id);
+        return updated;
+      });
+    }
   };
 
   const handleContinue = () => {
@@ -306,6 +438,173 @@ const SalonDetailsScreen = ({ navigation, route }) => {
 
         <View style={styles.sectionDivider} />
 
+        {/* BARBERS */}
+        <View style={styles.barbersSection}>
+          <View style={styles.barberSectionHeader}>
+            <View>
+              <Text style={styles.sectionEyebrow}>
+                THE TEAM
+              </Text>
+
+              <Text style={styles.sectionTitle}>
+                Meet our barbers
+              </Text>
+
+              <Text style={styles.sectionSubtitle}>
+                Get to know the professionals at this salon.
+              </Text>
+            </View>
+
+            <View style={styles.barberCount}>
+              <Text style={styles.barberCountText}>
+                {barbers.length} {barbers.length === 1 ? 'barber' : 'barbers'}
+              </Text>
+            </View>
+          </View>
+
+          {barbers.length === 0 ? (
+            <View style={styles.emptyServices}>
+              <Ionicons
+                name="people-outline"
+                size={30}
+                color={Colors.textMuted}
+              />
+
+              <Text style={styles.emptyTitle}>
+                No barbers available
+              </Text>
+
+              <Text style={styles.emptyText}>
+                This salon hasn't listed any barbers yet.
+              </Text>
+            </View>
+          ) : (
+            barbers.map((barber) => {
+              const barberId = String(barber._id || '');
+              const name = getBarberName(barber);
+              const photo = getBarberPhoto(barber);
+              const specialties = getBarberSpecialties(barber);
+              const isFavorite = favoriteBarberIds.has(barberId);
+              const isUpdating = favoriteLoadingIds.has(barberId);
+              const barberRating = Number(barber.avgRating) || 0;
+              const barberRatingCount = Number(barber.ratingCount) || 0;
+
+              return (
+                <View
+                  key={barberId}
+                  style={styles.barberCard}
+                >
+                  <View style={styles.barberMain}>
+                    {photo ? (
+                      <Image
+                        source={{ uri: photo }}
+                        style={styles.barberAvatar}
+                      />
+                    ) : (
+                      <View style={styles.barberAvatarPlaceholder}>
+                        <Ionicons
+                          name="person"
+                          size={27}
+                          color={Colors.secondary}
+                        />
+                      </View>
+                    )}
+
+                    <View style={styles.barberInfo}>
+                      <Text
+                        style={styles.barberName}
+                        numberOfLines={1}
+                      >
+                        {name}
+                      </Text>
+
+                      <View style={styles.barberRatingRow}>
+                        <Ionicons
+                          name="star"
+                          size={13}
+                          color={Colors.secondary}
+                        />
+
+                        <Text style={styles.barberRating}>
+                          {barberRating.toFixed(1)}
+                        </Text>
+
+                        <Text style={styles.barberRatingCount}>
+                          ({barberRatingCount} reviews)
+                        </Text>
+                      </View>
+
+                      {barber.isAvailable !== undefined && (
+                        <View style={styles.barberAvailability}>
+                          <View
+                            style={[
+                              styles.availabilityDot,
+                              barber.isAvailable
+                                ? styles.availableDot
+                                : styles.unavailableDot,
+                            ]}
+                          />
+
+                          <Text
+                            style={[
+                              styles.availabilityText,
+                              barber.isAvailable
+                                ? styles.availableText
+                                : styles.unavailableText,
+                            ]}
+                          >
+                            {barber.isAvailable
+                              ? 'Available'
+                              : 'Currently unavailable'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Pressable
+                      style={styles.favoriteButton}
+                      onPress={() => toggleFavoriteBarber(barber)}
+                      disabled={isUpdating || !barberId}
+                      hitSlop={8}
+                    >
+                      {isUpdating ? (
+                        <ActivityIndicator
+                          size="small"
+                          color={Colors.secondary}
+                        />
+                      ) : (
+                        <Ionicons
+                          name={isFavorite ? 'heart' : 'heart-outline'}
+                          size={23}
+                          color={isFavorite ? '#C44747' : Colors.primary}
+                        />
+                      )}
+                    </Pressable>
+                  </View>
+
+                  {specialties.length > 0 && (
+                    <View style={styles.specialtiesContainer}>
+                      {specialties.map((specialty, index) => (
+                        <View
+                          key={`${barberId}-${index}`}
+                          style={styles.specialtyTag}
+                        >
+                          <Text style={styles.specialtyText}>
+                            {specialty}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })
+          )}
+        </View>
+
+        <View style={styles.sectionDivider} />
+
+        {/* SERVICES */}
         <View style={styles.servicesSection}>
           <View style={styles.sectionHeader}>
             <View>
@@ -377,9 +676,7 @@ const SalonDetailsScreen = ({ navigation, route }) => {
                           </Text>
 
                           {service.description ? (
-                            <Text
-                              style={styles.serviceDescription}
-                            >
+                            <Text style={styles.serviceDescription}>
                               {service.description}
                             </Text>
                           ) : null}
@@ -606,16 +903,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     marginHorizontal: 20,
   },
-  servicesSection: {
+
+  // BARBERS
+  barbersSection: {
     paddingHorizontal: 20,
     paddingTop: 25,
+    paddingBottom: 25,
   },
-  sectionHeader: {
+  barberSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   sectionEyebrow: {
     color: Colors.secondary,
@@ -633,6 +933,132 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 11,
     marginTop: 5,
+  },
+  barberCount: {
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  barberCountText: {
+    color: Colors.primary,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  barberCard: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 15,
+    padding: 14,
+    marginBottom: 10,
+  },
+  barberMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  barberAvatar: {
+    width: 55,
+    height: 55,
+    borderRadius: 28,
+    backgroundColor: Colors.surfaceSecondary,
+  },
+  barberAvatarPlaceholder: {
+    width: 55,
+    height: 55,
+    borderRadius: 28,
+    backgroundColor: Colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  barberInfo: {
+    flex: 1,
+  },
+  barberName: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  barberRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 5,
+  },
+  barberRating: {
+    color: Colors.primary,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  barberRatingCount: {
+    color: Colors.textMuted,
+    fontSize: 10,
+  },
+  barberAvailability: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+  },
+  availabilityDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  availableDot: {
+    backgroundColor: '#39734D',
+  },
+  unavailableDot: {
+    backgroundColor: '#A34D43',
+  },
+  availabilityText: {
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  availableText: {
+    color: '#39734D',
+  },
+  unavailableText: {
+    color: '#A34D43',
+  },
+  favoriteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  specialtiesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 13,
+  },
+  specialtyTag: {
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  specialtyText: {
+    color: Colors.textSecondary,
+    fontSize: 9,
+    fontWeight: '600',
+  },
+
+  // SERVICES
+  servicesSection: {
+    paddingHorizontal: 20,
+    paddingTop: 25,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 20,
   },
   selectionCount: {
     backgroundColor: Colors.surfaceSecondary,
@@ -732,6 +1158,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
   },
+
+  // BOTTOM BAR
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -786,6 +1214,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+
+  // STATES
   centerState: {
     flex: 1,
     backgroundColor: Colors.background,

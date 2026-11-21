@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 import { randomUUID } from "node:crypto";
 
@@ -7,6 +6,7 @@ import * as barberProfileRepository from "../../repository/barberProfileReposito
 import * as serviceRepository from "../../repository/serviceRepository.js";
 
 import Status from "../../model/statusModel.js";
+import { getIO } from "../../config/socket.js";
 
 export const requestBookingWithTimer = async (customerId, payload = {}) => {
   const { barberProfileId, serviceIds, date, startTime } = payload;
@@ -58,7 +58,7 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
   }
 
   // FIX: Database uses branchId, not currentBranchId
-  const branchId = barber.branchId;
+  const branchId = barber.currentBranchId;
 
   if (!branchId || !mongoose.isValidObjectId(branchId)) {
     throw new Error("BARBER_BRANCH_NOT_FOUND");
@@ -179,7 +179,47 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     isOffPeakBooking: false,
     holdExpiresAt,
   });
+  // Fetch populated booking details for notification
 
+
+  // Notify the assigned barber
+  try {
+    const notificationBooking =
+      await bookingRepository.findBookingNotificationById(booking._id);
+    getIO()
+      .to(`barber:${String(booking.barberId)}`)
+      .emit("booking:new-request", {
+        bookingId: String(booking._id),
+        appointmentCode: booking.appointmentCode,
+
+        customer: {
+          id: String(customerId),
+          name: notificationBooking?.customerId?.name || "Customer",
+          profilePhoto:
+            notificationBooking?.customerId?.profilePhoto || null,
+        },
+
+        branch: {
+          name: notificationBooking?.branchId?.name || "",
+        },
+
+        services: servicesSnapshot,
+        date,
+        startTime,
+        endTime,
+        totalDuration,
+        totalAmount,
+        depositAmount,
+        holdExpiresAt: booking.holdExpiresAt,
+        status: "PENDING",
+      });
+
+    console.log(
+      `New booking notification sent to barber: ${booking.barberId}`
+    );
+  } catch (socketError) {
+    console.error("Booking notification error:", socketError.message);
+  }
   return {
     bookingId: booking._id,
     appointmentCode: booking.appointmentCode,
@@ -198,4 +238,5 @@ export const requestBookingWithTimer = async (customerId, payload = {}) => {
     status: "PENDING",
     message: "Booking requested. Barber has 2 minutes to accept.",
   };
+
 };

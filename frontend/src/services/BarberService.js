@@ -31,6 +31,7 @@ const barberService = {
 
     return response.data;
   },
+
   getTodayAppointments: async (token) => {
     const response = await api.get(
       '/api/barber/appointments/today',
@@ -39,6 +40,7 @@ const barberService = {
 
     return response.data;
   },
+
   // APPOINTMENT LIST APIs
 
   getUpcomingBookings: async (params = {}, token) => {
@@ -61,16 +63,24 @@ const barberService = {
         params,
       }
     );
-
     return response.data;
   },
 
   // APPOINTMENT ACTION APIs
-
   acceptBooking: async (bookingId, token) => {
     const response = await api.patch(
       `/api/bookings/${bookingId}/accept`,
       {},
+      authHeader(token)
+    );
+
+    return response.data;
+  },
+
+  rejectBooking: async (bookingId, reason, token) => {
+    const response = await api.patch(
+      `/api/bookings/${bookingId}/reject`,
+      { reason },
       authHeader(token)
     );
 
@@ -99,7 +109,6 @@ const barberService = {
 
 
   // SCHEDULE APIs
-
   getSchedule: async (token) => {
     const response = await api.get(
       '/api/barber/schedule',
@@ -116,7 +125,6 @@ const barberService = {
       { schedule },
       authHeader(token)
     );
-
     return response.data;
   },
 
@@ -124,19 +132,6 @@ const barberService = {
   getScheduleRequests: async (token) => {
     const response = await api.get(
       '/api/barber/schedule/my-requests',
-      authHeader(token)
-    );
-
-    return response.data;
-  },
-
-
-  // AVAILABILITY API
-
-  toggleAvailability: async (isAvailable, token) => {
-    const response = await api.patch(
-      '/api/barber/availability',
-      { isAvailable },
       authHeader(token)
     );
     return response.data;
@@ -166,6 +161,15 @@ const barberService = {
       `/api/barber/leaves/${leaveId}`,
       authHeader(token)
     );
+    return response.data;
+  },
+  // GET /api/barber/booking-requests/:bookingId
+  getBookingRequestDetails: async (bookingId, token) => {
+    const response = await api.get(
+      `/api/barber/booking-requests/${bookingId}`,
+      authHeader(token)
+    );
+
     return response.data;
   },
 };
